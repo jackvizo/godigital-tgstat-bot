@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model stat_user {
+  pk                BigInt    @id
+  timestamp         DateTime  @default(now())
+  joined_at         DateTime?
+  left_at           DateTime?
+  tg_user_id        BigInt
+  tg_channel_id     BigInt
+  first_name        String?
+  last_name         String?
+  username          String?
+  scam              Boolean?
+  premium           Boolean?
+  verified          Boolean?
+  is_joined_by_link Boolean?
+  phone             String?
+}
+
+model stat_post {
+  pk                          BigInt   @id
+  timestamp                   DateTime @default(now())
+  tg_post_id                  BigInt
+  tg_channel_id               BigInt
+  message                     String
+  views                       Int
+  views_1h                    Int
+  view_24h                    Int
+  total_reactions_count       Int
+  reactions_1h                Int
+  reaction_24h                Int
+  comments_messages_count     Int
+  comments_users_count        Int
+  comments_channels_count     Int
+  comments_messages_count_1h  Int
+  comments_messages_count_24h Int
+  link                        String
+  media                       String
+  forwards                    Int
+}
+
+model stat_reaction {
+  pk                     BigInt   @id
+  timestamp              DateTime @default(now())
+  tg_post_id             BigInt
+  tg_channel_id          BigInt
+  reaction_count         Int
+  reaction_emoticon      String
+  reaction_emoticon_code Int
+}
+
+model config__tg_channel {
+  pk         BigInt   @id
+  created_at DateTime @default(now())
+
+  tg_channel_id   BigInt
+  tg_channel_name String
+
+  config__tg_bot_session_pool config__tg_bot_session_pool[]
+}
+
+model config__tg_bot_session_pool {
+  pk         BigInt   @id
+  created_at DateTime @default(now())
+
+  api_id        String
+  api_hash      String
+  phone_number  String
+  session_bytes Bytes?
+
+  status                String              @default("enabled")
+  config__tg_channel    config__tg_channel? @relation(fields: [config__tg_channel_pk], references: [pk])
+  config__tg_channel_pk BigInt?
+}
+
+model datalake__tg_channel {
+  pk        BigInt   @id
+  timestamp DateTime @default(now())
+
+  json Json?
+
+  tg_channel_id BigInt
+}
+
+model datalake__tg_post {
+  pk        BigInt   @id
+  timestamp DateTime @default(now())
+
+  json Json?
+
+  tg_channel_id BigInt
+  tg_post_id    BigInt
+}
+
+model datalake__tg_comment {
+  pk        BigInt   @id
+  timestamp DateTime @default(now())
+
+  json Json?
+
+  tg_channel_id BigInt
+  tg_post_id    BigInt
+}
+
+model datalake__tg_admin_log {
+  pk        BigInt   @id
+  timestamp DateTime @default(now())
+
+  json Json?
+
+  tg_channel_id BigInt
+}
