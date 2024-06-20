@@ -1,7 +1,7 @@
-from datetime import datetime
+from sqlalchemy import create_engine, func, \
+    Column, BigInteger, DateTime, Integer, String, Boolean, LargeBinary, ForeignKey, JSON
 
-from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import declarative_base, relationship
 
 from config import db_engine
 
@@ -10,52 +10,138 @@ engine = create_engine(db_engine)
 Base = declarative_base()
 
 
-class User:
-    pk: int = None
-    tg_user_id: int = None
-    firstName = ""
-    lastName = ""
-    username = ""
-    scam: bool = False
-    premium: bool = False
-    timestamp: bool = False
-    date_of_update = datetime.today().replace(microsecond=0)
-    phone = ""
-    tg_channel_id: int = None
-    is_joined_by_link: bool = False
-    joined_at: datetime = None
-    left_at: datetime = None
+class Stat_user(Base):
+    __tablename__ = 'stat_user'
+
+    pk = Column(BigInteger, primary_key=True)
+    timestamp = Column(DateTime, server_default=func.now())
+    joined_at = Column(DateTime)
+    left_at = Column(DateTime)
+
+    tg_user_id = Column(BigInteger)
+    tg_channel_id = Column(BigInteger)
+
+    first_name = Column(String(255))
+    last_name = Column(String(255))
+    username = Column(String(255))
+    phone = Column(String(255))
+
+    scam = Column(Boolean)
+    premium = Column(Boolean)
+    verified = Column(Boolean)
+    is_joined_by_link = Column(Boolean)
 
 
-class Post:
-    id: int = None
-    channel_id: int
-    post_id: int = None
-    message: str = None
-    views: int = 0
-    views_1h: int = 0
-    views_24h: int = 0
-    total_reactions_count: int = 0
-    reactions_1h: int = 0
-    reactions_24h: int = 0
-    comments_messages_count: int = None
-    comments_messages_count_1h: int = None
-    comments_messages_count_24h: int = None
-    comments_users_count: int = None
-    comments_channels_count: int = None
-    date_of_update = datetime.today().replace(microsecond=0)
-    link: str = None
-    media: str = None
-    date_of_post: datetime = None
-    forwards: int = 0
+class Stat_post(Base):
+    __tablename__ = 'stat_post'
+
+    pk = Column(BigInteger, primary_key=True)
+    timestamp = Column(DateTime, server_default=func.now())
+
+    tg_post_id = Column(BigInteger)
+    tg_channel_id = Column(BigInteger)
+
+    message = Column(String(255))
+    views = Column(Integer)
+    views_1h = Column(Integer)
+    views_24h = Column(Integer)
+
+    total_reactions_count = Column(Integer)
+    reactions_1h = Column(Integer)
+    reaction_24h = Column(Integer)
+
+    comments_messages_count = Column(Integer)
+    comments_users_count = Column(Integer)
+
+    comments_channels_count = Column(Integer)
+    comments_messages_count_1h = Column(Integer)
+    comments_messages_count_24h = Column(Integer)
+
+    link = Column(String(255))
+    media = Column(String(255))
+    forwards = Column(Integer)
 
 
-class Reaction:
-    pk: int = None
-    timestamp: int
-    tg_channel_id: int = None
-    tg_post_id: int = None
-    reaction_count: int = 0
-    reaction_emoticon: str = None
-    reaction_emoticon_code: int = 0
+class Stat_reaction(Base):
+    __tablename__ = 'stat_reaction'
 
+    pk = Column(BigInteger, primary_key=True)
+    timestamp = Column(DateTime, server_default=func.now())
+
+    tg_post_id = Column(BigInteger)
+    tg_channel_id = Column(BigInteger)
+
+    reaction_count = Column(Integer)
+    reaction_emoticon = Column(String(255))
+    reaction_emoticon_code = Column(Integer)
+
+
+class Config__tg_channel(Base):
+    __tablename__ = 'config__tg_channel'
+
+    pk = Column(BigInteger, primary_key=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    tg_channel_id = Column(BigInteger)
+    tg_channel_name = Column(String(255))
+
+    config__tg_bot_session_pool = relationship('Config__tg_bot_session_pool')
+
+
+class Config__tg_bot_session_pool(Base):
+    __tablename__ = 'config__tg_bot_session_pool'
+
+    pk = Column(BigInteger, primary_key=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    api_id = Column(String(255))
+    api_hash = Column(String(255))
+    phone_number = Column(String(255))
+    session_bytes = Column(LargeBinary)
+
+    status = Column(String(255), default='enabled')     # enabled/banned
+
+    config__tg_channel = Column(BigInteger, ForeignKey('config__tg_channel.pk'))
+    config__tg_channel_pk = Column(BigInteger)
+
+
+class Datalake__tg_channel(Base):
+    __tablename__ = 'datalake__tg_channel'
+
+    pk = Column(BigInteger, primary_key=True)
+    timestamp = Column(DateTime, server_default=func.now())
+
+    json = Column(JSON)
+    tg_channel_id = Column(BigInteger)
+
+
+class Datalake__tg_post(Base):
+    __tablename__ = 'datalake__tg_post'
+
+    pk = Column(BigInteger, primary_key=True)
+    timestamp = Column(DateTime, server_default=func.now())
+
+    json = Column(JSON)
+    tg_channel_id = Column(BigInteger)
+    tg_post_id = Column(BigInteger)
+
+
+class Datalake__tg_comment(Base):
+    __tablename__ = 'datalake__tg_comment'
+
+    pk = Column(BigInteger, primary_key=True)
+    timestamp = Column(DateTime, server_default=func.now())
+
+    json = Column(JSON)
+    tg_channel_id = Column(BigInteger)
+    tg_post_id = Column(BigInteger)
+
+
+class Datalake__tg_admin_log(Base):
+    __tablename__ = 'datalake__tg_admin_log'
+
+    pk = Column(BigInteger, primary_key=True)
+    timestamp = Column(DateTime, server_default=func.now())
+
+    json = Column(JSON)
+    tg_channel_id = Column(BigInteger)
