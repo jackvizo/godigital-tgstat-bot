@@ -1,6 +1,6 @@
 import types
 from datetime import timedelta, datetime, time
-from models import Reaction, Post
+from models import Stat_reaction, Stat_post
 
 
 async def get_posts(client, id, max_posts=1500, parent=None):
@@ -27,7 +27,7 @@ async def get_posts(client, id, max_posts=1500, parent=None):
         sql = asyncSQLDataService()
 
         async for p in posts:
-            post = Post()
+            post = Stat_post()
             total_message = posts.total
 
             if type(p) == types.MessageService:
@@ -48,7 +48,7 @@ async def get_posts(client, id, max_posts=1500, parent=None):
                     pass
                     # pprint(p.reactions.to_dict())
                     for res in p.reactions.results:
-                        react = Reaction()
+                        react = Stat_reaction()
                         react.reaction_count = res.count
                         post.total_reactions_count = post.total_reactions_count + res.count
                         try:
@@ -132,7 +132,7 @@ async def get_comments(client, id, msg_id, max=300, sql=None):
     counter_comments = 0
     offset_id = 0
 
-    user = Post()
+    user = Stat_post()
 
     while True:
         pass
@@ -152,7 +152,7 @@ async def get_comments(client, id, msg_id, max=300, sql=None):
                 pass
                 for u in comments.users:
                     pass
-                    user = Post()
+                    user = Stat_post()
                     user.user_id = u.pk
                     user.username = u.username
                     user.firstName = u.first_name
