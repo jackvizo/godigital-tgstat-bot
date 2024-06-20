@@ -1,0 +1,16 @@
+# database
+host = "localhost"
+port = "5432"
+user = "tgbot"
+password = "pass_123"
+db_name = "tgbot_db"
+
+# SQLAlchemy
+dialect = "postgresql"
+driver = "psycopg"              # psycopg => 'psycopg3'
+# dialect+driver://username:password@host:port/database
+db_engine = f"{dialect}+{driver}://{user}:{password}@{host}:{port}/{db_name}"
+
+# telegram
+api_id = ""
+api_hash = ""
