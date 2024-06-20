@@ -32,7 +32,7 @@ model stat_post {
   message                     String
   views                       Int
   views_1h                    Int
-  view_24h                    Int
+  views_24h                    Int
   total_reactions_count       Int
   reactions_1h                Int
   reaction_24h                Int
