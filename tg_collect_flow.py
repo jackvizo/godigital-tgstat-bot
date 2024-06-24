@@ -1,6 +1,9 @@
+import prefect
 from prefect import flow, task
 from telethon.sync import TelegramClient
 from telethon.sessions import StringSession
+
+import config
 from db_utils import get_db_connection, get_channels, get_session_from_db
 
 
@@ -32,7 +35,7 @@ def task_collect_data(db, tg_client, tg_channel_name):
 
 @flow(name="tg-collect", log_prints=True)
 def tg_collect_flow():
-    phone_number = '79999999999'
+    phone_number = prefect.client.secrets.Secret("phone_number")
     db = create_db_instance()
     tg_client = task_authorize(db, phone_number)
 

@@ -1,9 +1,9 @@
-import psycopg
+import psycopg2
 import config
 
 
 def get_db_connection():
-    return psycopg.connect(
+    return psycopg2.connect(
         database=config.db_name,    # "TG_bot_db"
         host=config.host,           # "localhost"
         port=config.port,           # "5432"
@@ -26,13 +26,13 @@ def get_session_from_db(phone_number):
     return result
 
 
-def save_session_to_db(api_id, api_hash, phone_number, session_str):
+def save_session_to_db(api_id, api_hash, phone_number, session_str, status):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO config__tg_bot_session_pool (api_id, api_hash, phone_number, session_bytes)
-        VALUES (%s, %s, %s, %s)
-    """, (api_id, api_hash, phone_number, session_str))
+        INSERT INTO config__tg_bot_session_pool (api_id, api_hash, phone_number, session_bytes, status)
+        VALUES (%s, %s, %s, %s, %s)
+    """, (api_id, api_hash, phone_number, session_str, status))
     conn.commit()
     cursor.close()
     conn.close()

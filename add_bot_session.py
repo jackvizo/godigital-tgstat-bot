@@ -1,4 +1,6 @@
 import argparse
+
+from telethon.errors import PhoneNumberBannedError
 from telethon.sync import TelegramClient
 from telethon.sessions import StringSession
 from db_utils import save_session_to_db
@@ -15,5 +17,15 @@ if __name__ == "__main__":
 
     with client:
         session_str = client.session.save()
-        save_session_to_db(args.api_id, args.api_hash, args.phone_number, session_str)
-        print("Session saved to database.")
+        if not client.is_user_authorized():
+            try:
+                client.send_code_request(args.phone_number)
+            except PhoneNumberBannedError:
+                print("Phone number is banned.")
+                client.disconnect()
+                status = 'banned'
+        else:
+            status = 'enabled'
+
+        save_session_to_db(args.api_id, args.api_hash, args.phone_number, session_str, status)
+        print(f"Session saved to database with status {status}.")
