@@ -13,7 +13,8 @@ if __name__ == "__main__":
     session_data = get_session_from_db(args.phone_number)
     if session_data:
         api_id, api_hash, session_bytes = session_data
-        client = TelegramClient(StringSession(session_bytes), api_id, api_hash)
+        session_str = session_bytes.tobytes().decode('utf-8')
+        client = TelegramClient(StringSession(session_str), api_id, api_hash)
 
         with client:
             tg_channel = client.get_entity(args.tg_channel_name)
