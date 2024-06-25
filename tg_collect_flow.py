@@ -35,7 +35,7 @@ def task_collect_data(db, tg_client, tg_channel_name):
 
 @flow(name="tg-collect", log_prints=True)
 def tg_collect_flow():
-    phone_number = prefect.client.secrets.Secret("phone_number")
+    phone_number = prefect.blocks.system.String.load("phone")
     db = create_db_instance()
     tg_client = task_authorize(db, phone_number)
 

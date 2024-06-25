@@ -1,5 +1,7 @@
 import argparse
 
+from python_socks import ProxyType
+from prefect.blocks.system import JSON
 from telethon.errors import PhoneNumberBannedError
 from telethon.sync import TelegramClient
 from telethon.sessions import StringSession
@@ -12,6 +14,10 @@ if __name__ == "__main__":
     parser.add_argument('--phone_number', required=True, type=str, help='Phone number associated with the bot')
 
     args = parser.parse_args()
+
+    # proxy = JSON.load("proxy").value
+    # proxy['proxy_type'] = ProxyType.HTTP    # ProxyType.SOCKS5, ProxyType.SOCKS4
+    # client = TelegramClient(StringSession(), args.api_id, args.api_hash, proxy=proxy)
 
     client = TelegramClient(StringSession(), args.api_id, args.api_hash)
 
