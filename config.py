@@ -5,6 +5,11 @@ user = "tgbot"
 password = "pass_123"
 db_name = "tgbot_db"
 
+# db table names
+posts = 'stat_post'
+reactions = 'stat_reaction'
+users = 'stat_user'
+
 # SQLAlchemy
 dialect = "postgresql"
 driver = "psycopg"              # psycopg => 'psycopg3'
