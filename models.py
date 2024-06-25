@@ -1,5 +1,5 @@
 from sqlalchemy import create_engine, func, \
-    Column, BigInteger, DateTime, Integer, String, Boolean, LargeBinary, ForeignKey, JSON
+    Column, BigInteger, DateTime, Integer, String, Boolean, Text, ForeignKey, JSON
 
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -97,7 +97,7 @@ class Config__tg_bot_session_pool(Base):
     api_id = Column(String(255))
     api_hash = Column(String(255))
     phone_number = Column(String(255))
-    session_bytes = Column(LargeBinary)
+    session_bytes = Column(Text)    # LargeBinary
 
     status = Column(String(255), default='enabled')     # enabled/banned
 
