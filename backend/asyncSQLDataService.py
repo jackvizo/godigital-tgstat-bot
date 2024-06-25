@@ -1,6 +1,7 @@
 from time import sleep
 
 from config import db_name, posts, reactions, users
+from db_utils import get_db_connection
 from models import Stat_post, Stat_reaction, Stat_user
 
 from typing import Any
@@ -19,9 +20,9 @@ class asyncSQLDataService(object):
         pass
 
     async def init(self, databaseName=db_name, forceCreation=False):
-        pass
         sys.stdout.reconfigure(encoding='utf-8')
-        self.connection = await aiosqlite.connect(database=databaseName, check_same_thread=False)
+        # self.connection = await aiosqlite.connect(database=databaseName, check_same_thread=False)
+        self.connection = await get_db_connection()
         self.cursor = await self.connection.cursor()
         self.cursor.connection.autocommit = True
         if forceCreation:
@@ -38,11 +39,11 @@ class asyncSQLDataService(object):
         if res == None:
             return await self._insert_user(user)
         else:
-            user.id = res.id
+            user.pk = res.pk
             return await self._update_user(user)
 
     async def get_user_id(self, user: Stat_user) -> Stat_user:
-        await self.cursor.execute(Constants.SQL_SELECT_USER_TG_BY_ID, (user.user_id,))
+        await self.cursor.execute(Constants.SQL_SELECT_USER_TG_BY_ID, (user.tg_user_id,))
         record = await self.cursor.fetchone()
         if record == None:
             return None
@@ -54,11 +55,11 @@ class asyncSQLDataService(object):
         if res == None:
             return await self._insert_post(post)
         else:
-            post.id = res.id
+            post.pk = res.pk
             return await self._update_post(post)
 
     async def get_post_id(self, post: Stat_post) -> Stat_post:
-        await self.cursor.execute(Constants.SQL_SELECT_POST_BY_ID, (post.channel_id, post.post_id, post.views,))
+        await self.cursor.execute(Constants.SQL_SELECT_POST_BY_ID, (post.tg_channel_id, post.tg_post_id, post.views,))
         record = await self.cursor.fetchone()
         if record == None:
             return None
@@ -92,7 +93,8 @@ class asyncSQLDataService(object):
         return rec_list
 
     async def get_react_id(self, react: Stat_reaction) -> Stat_reaction:
-        await self.cursor.execute(Constants.SQL_SELECT_REACTIONS_BY_ID, (react.channel_id, react.post_id, react.reaction_emoticon_code,))
+        await self.cursor.execute(Constants.SQL_SELECT_REACTIONS_BY_ID,
+                                  (react.tg_channel_id, react.tg_post_id, react.reaction_emoticon_code))
         record = await self.cursor.fetchone()
         if record == None:
             return None

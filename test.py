@@ -4,6 +4,7 @@ from time import time
 
 from prefect.blocks.system import String
 from telethon import functions, types, events
+from telethon.tl.functions.messages import GetRepliesRequest
 
 from backend.asyncSQLDataService import asyncSQLDataService
 from models import Stat_reaction, Stat_post, Stat_user
@@ -13,6 +14,7 @@ dbname = String.load("db").value
 groups = [gr.strip() for gr in String.load("groups").value.split(',')]
 
 log = None
+
 
 async def run_logging(client, max_posts=15, parent=''):
     global log
@@ -255,19 +257,19 @@ async def read_channels(client, search_name):
 
 async def write2pgsql(matrix: list, base_name: str):
     try:
-        mysql = MYSQLDataService(hostname=clientAPI.mysql_host, user=clientAPI.mysql_login, password=clientAPI.mysql_pass,
+        dbase = MYSQLDataService(hostname=clientAPI.mysql_host, user=clientAPI.mysql_login, password=clientAPI.mysql_pass,
                                  databaseName=''+str('posts'), forceCreation=False)
 
     except Exception as e:
         print(e)
         return False
-    # mysql = MYSQLDataService(hostname="92.255.111.148", user='user_test3', password='QW12er34!!', databaseName=base_name_to_check, forceCreation=True)
+    # dbase = MYSQLDataService(hostname="92.255.111.148", user='user_test3', password='QW12er34!!', databaseName=base_name_to_check, forceCreation=True)
     print('start write 2 sql ', datetime.now().strftime("%d.%m.%Y %H:%M:%S"))
-    res = mysql.store_table(base_name, matrix)
+    res = dbase.store_table(base_name, matrix)
     if res is None:
         print('ERROR1 write 2 sql ', datetime.now().strftime("%d.%m.%Y %H:%M:%S"), " wait 5 sec and retry")
         await asyncio(5)
-        res = mysql.store_table(base_name, matrix)
+        res = dbase.store_table(base_name, matrix)
         if res is None:
             print('ERROR2 write 2 sql ', datetime.now().strftime("%d.%m.%Y %H:%M:%S"), " exiting")
             return False
