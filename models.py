@@ -24,7 +24,7 @@ class Stat_user(Base):
     first_name = Column(String(255))
     last_name = Column(String(255))
     username = Column(String(255))
-    phone = Column(String(255))
+    phone = Column(String(50))
 
     scam = Column(Boolean)
     premium = Column(Boolean)
@@ -41,24 +41,24 @@ class Stat_post(Base):
     tg_post_id = Column(BigInteger)
     tg_channel_id = Column(BigInteger)
 
-    message = Column(String(255))
+    message = Column(Text)
     views = Column(Integer)
     views_1h = Column(Integer)
     views_24h = Column(Integer)
 
     total_reactions_count = Column(Integer)
     reactions_1h = Column(Integer)
-    reaction_24h = Column(Integer)
+    reactions_24h = Column(Integer)
+
+    comments_users_count = Column(Integer)
+    comments_channels_count = Column(Integer)
 
     comments_messages_count = Column(Integer)
-    comments_users_count = Column(Integer)
-
-    comments_channels_count = Column(Integer)
     comments_messages_count_1h = Column(Integer)
     comments_messages_count_24h = Column(Integer)
 
-    link = Column(String(255))
-    media = Column(String(255))
+    link = Column(Text)
+    media = Column(Text)
     forwards = Column(Integer)
 
 
@@ -72,7 +72,7 @@ class Stat_reaction(Base):
     tg_channel_id = Column(BigInteger)
 
     reaction_count = Column(Integer)
-    reaction_emoticon = Column(String(255))
+    reaction_emoticon = Column(String(5))
     reaction_emoticon_code = Column(Integer)
 
 
@@ -96,10 +96,10 @@ class Config__tg_bot_session_pool(Base):
 
     api_id = Column(String(255))
     api_hash = Column(String(255))
-    phone_number = Column(String(255))
-    session_bytes = Column(Text)    # LargeBinary
+    phone_number = Column(String(50))
+    session_bytes = Column(Text)
 
-    status = Column(String(255), default='enabled')     # enabled/banned
+    status = Column(String(10), default='enabled')     # enabled/banned
 
     config__tg_channel = Column(BigInteger, ForeignKey('config__tg_channel.pk'))
     config__tg_channel_pk = Column(BigInteger)
