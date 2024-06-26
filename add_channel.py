@@ -4,7 +4,7 @@ import argparse
 from telethon.sync import TelegramClient
 from telethon.sessions import StringSession
 from db_utils import get_session_from_db, save_channel_to_db
-
+from my.get_test_client import get_test_client
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Add a new Telegram channel to track.')
@@ -21,12 +21,13 @@ if __name__ == "__main__":
         # loop = asyncio.new_event_loop()
         # asyncio.set_event_loop(loop)
 
-        client = TelegramClient(StringSession(session_bytes), api_id, api_hash)     # loop=loop
+        # client = TelegramClient(StringSession(session_bytes), api_id, api_hash)     # loop=loop
         # client.start(phone=phone)
+        client = get_test_client()
 
         with client:
-            tg_channel = client.get_entity(args.tg_channel_name)
-            save_channel_to_db(tg_channel.id, tg_channel.title, session_data[0])
-            print("Channel saved to database.")
+            tg_channel = client.get_entity('t.me/' + args.tg_channel_name)
+            save_channel_to_db(tg_channel.id, tg_channel.title)  # , session_data[0] ()
+            print(f"Channel {args.tg_channel_name} saved to database.")
     else:
         print("No active session found for the given phone number.")

@@ -38,13 +38,13 @@ def save_session_to_db(api_id, api_hash, phone_number, session_str, status):
     conn.close()
 
 
-def save_channel_to_db(tg_channel_id, tg_channel_name, bot_session_pool_id):
+def save_channel_to_db(tg_channel_id, tg_channel_name):     # , config__tg_bot_session_pool
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO config__tg_channel (tg_channel_id, tg_channel_name, bot_session_pool_id)
-        VALUES (%s, %s, %s)
-    """, (tg_channel_id, tg_channel_name, bot_session_pool_id))
+        INSERT INTO config__tg_channel (tg_channel_id, tg_channel_name)  
+        VALUES (%s, %s) 
+    """, (tg_channel_id, tg_channel_name))      # , config__tg_bot_session_pool
     conn.commit()
     cursor.close()
     conn.close()
