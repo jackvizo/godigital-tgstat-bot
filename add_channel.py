@@ -26,7 +26,7 @@ if __name__ == "__main__":
         client = get_test_client()
 
         with client:
-            tg_channel = client.get_entity('t.me/' + args.tg_channel_name)
+            tg_channel = client.get_entity(args.tg_channel_name)
             save_channel_to_db(tg_channel.id, tg_channel.title)  # , session_data[0] ()
             print(f"Channel {args.tg_channel_name} saved to database.")
     else:
