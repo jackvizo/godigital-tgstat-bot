@@ -50,7 +50,7 @@ def save_channel_to_db(tg_channel_id, tg_channel_name):     # , config__tg_bot_s
     conn.close()
 
 
-def get_channels():
+def get_bd_channels():
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
