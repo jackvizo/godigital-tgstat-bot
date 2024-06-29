@@ -28,6 +28,7 @@ model stat_post {
   pk                          BigInt   @id
   timestamp                   DateTime @default(now())
   tg_post_id                  BigInt
+  date_of_post                String  // есть в ТЗ, тип в legacy
   tg_channel_id               BigInt
   message                     String 
   views                       Int

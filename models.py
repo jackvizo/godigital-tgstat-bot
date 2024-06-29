@@ -37,6 +37,7 @@ class Stat_post(Base):
 
     pk = Column(BigInteger, primary_key=True)
     timestamp = Column(DateTime, server_default=func.now())
+    date_of_post = Column(String(25))   # forgot in the schema.prism
 
     tg_post_id = Column(BigInteger)
     tg_channel_id = Column(BigInteger)
