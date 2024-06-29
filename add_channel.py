@@ -4,7 +4,7 @@ import argparse
 from telethon.sync import TelegramClient
 from telethon.sessions import StringSession
 from db_utils import get_session_from_db, save_channel_to_db
-from my.get_test_client import get_test_client
+from test.utils import get_test_client
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Add a new Telegram channel to track.')
@@ -15,19 +15,22 @@ if __name__ == "__main__":
 
     session_data = get_session_from_db(args.phone_number)
     if session_data:
-        api_id, api_hash, session_bytes = session_data
+        api_id, api_hash, session_str = session_data
 
-        # phone = prefect.blocks.system.String.load("phone").value
-        # loop = asyncio.new_event_loop()
-        # asyncio.set_event_loop(loop)
+        client = TelegramClient(StringSession(session_str), api_id, api_hash)
+        client.connect()
 
-        # client = TelegramClient(StringSession(session_bytes), api_id, api_hash)     # loop=loop
-        # client.start(phone=phone)
-        client = get_test_client()
+        if client.is_user_authorized():
+            print(f'Ok, session with phone_number {args.phone_number} is connected!')
+        else:
+            print('Необходима авторизация:')
 
         with client:
             tg_channel = client.get_entity(args.tg_channel_name)
-            save_channel_to_db(tg_channel.id, tg_channel.title)  # , session_data[0] ()
+            save_channel_to_db(tg_channel.id, tg_channel.title)
             print(f"Channel {args.tg_channel_name} saved to database.")
     else:
         print("No active session found for the given phone number.")
+
+
+
