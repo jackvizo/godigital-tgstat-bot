@@ -4,7 +4,7 @@ from telethon.sync import TelegramClient
 from telethon.sessions import StringSession
 
 import config
-from db_utils import get_db_connection, get_channels, get_session_from_db
+from db_utils import get_db_connection, get_db_channels, get_session_from_db
 
 
 @task
@@ -39,6 +39,6 @@ def tg_collect_flow():
     db = create_db_instance()
     tg_client = task_authorize(db, phone_number)
 
-    channels = get_channels()
+    channels = get_db_channels()
     for tg_channel_id, tg_channel_name in channels:
         task_collect_data(db, tg_client, tg_channel_name)

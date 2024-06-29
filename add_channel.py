@@ -4,7 +4,7 @@ import argparse
 from telethon.sync import TelegramClient
 from telethon.sessions import StringSession
 from db_utils import get_session_from_db, save_channel_to_db
-from test.utils import get_test_client
+from tests.utils import get_tg_client
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Add a new Telegram channel to track.')

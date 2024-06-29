@@ -6,7 +6,7 @@ from telethon.errors import PhoneNumberBannedError
 from telethon.sync import TelegramClient
 from telethon.sessions import StringSession
 from db_utils import save_session_to_db
-from test.utils import get_test_client
+from tests.utils import get_tg_client
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Add a new Telegram bot session to the pool.')
@@ -21,6 +21,7 @@ if __name__ == "__main__":
     # client = TelegramClient(StringSession(), args.api_id, args.api_hash, proxy=proxy)
 
     client = TelegramClient(StringSession(), args.api_id, args.api_hash)
+    # client, args.phone_number, args.api_id, args.api_hash = get_tg_client()
 
     with client:
         if not client.is_user_authorized():

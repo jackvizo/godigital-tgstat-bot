@@ -7,13 +7,15 @@ from telethon import functions, types, events
 from telethon.sessions import StringSession
 from telethon.sync import TelegramClient
 from telethon.tl.functions.messages import GetRepliesRequest
+
+from colorama import Fore, Back, Style
 from pprint import pprint
 
 import config
 from backend.asyncSQLDataService import asyncSQLDataService
 from models import Stat_post, Stat_reaction, Stat_user
-from db_utils import get_session_from_db, get_bd_channels
-from test.utils import get_test_client
+from db_utils import get_session_from_db, get_db_channels
+from tests.utils import get_tg_client
 
 
 async def task_authorize(phone):
@@ -25,14 +27,14 @@ async def task_authorize(phone):
             tg_client = TelegramClient(StringSession(session_str), api_id, api_hash)
         except Exception as e:
             print(f'Ошибка инициализации клиента: {e}')
-            tg_client = get_test_client()
+            tg_client = get_tg_client()
 
         if tg_client.is_user_authorized():
             await tg_client.connect()
             res = True
         else:
             res = False
-        print(f'Клиент (тел.: {phone}) {"" if res else "не "}авторизован по сохраненной сессии!')
+        print(f'Клиент (тел.: {phone}){"" if res else "не"} авторизован по сохраненной сессии!')
     else:
         raise ValueError("No active session found for the given phone number.")
     return tg_client
@@ -64,76 +66,17 @@ async def read_channels(client, search_name):
             print(f'Ошибка получения username для "{dial.title}": {e}')
             username = None
 
-        # if dial.is_group:
-        #     print('[group ]' + Back.GREEN + Fore.BLACK, dial.id,  dial.title, username, dial.is_user, dial.is_channel, dial.is_group, Style.RESET_ALL)
-        # elif dial.is_channel:
-        #     print('[chanel]' + Back.RED + Fore.BLACK, dial.id,  dial.title, username, dial.is_user, dial.is_channel, dial.is_group, Style.RESET_ALL)
-        # else:
-        #     print('[others]' + Back.YELLOW + Fore.BLACK, dial.id,  dial.title, username, dial.is_user, dial.is_channel, dial.is_group, Style.RESET_ALL)
+        suffix = f' {Back.GREEN}{Fore.BLACK} {dial.id} {dial.title} {username} {dial.is_user} {dial.is_channel} {dial.is_group} {Style.RESET_ALL}'
+        if dial.is_group:
+            print('[group ]' + suffix)
+        elif dial.is_channel:
+            print('[chanel]' + suffix)
+        else:
+            print('[others]' + suffix)
 
         if (dial.title.lower() == search_name.lower()) or (search_name.lower() in dial.title.lower()):
             return dial.id
     return None
-
-
-async def get_comments(client, id, msg_id, max=300, sql=None):
-    comments = None
-    comments_channels_count = 0
-    comments_users_count = 0
-    comments_messages_count = 0
-    total_comments = 0
-    counter_comments = 0
-    offset_id = 0
-
-    while True:
-        pass
-        comments = await client(GetRepliesRequest(peer=id, msg_id=msg_id, offset_id=offset_id, offset_date=0,
-                                                  add_offset=0, limit=400, max_id=0, min_id=0, hash=0))
-        # comments = await client(GetRepliesRequest(peer=id, msg_id=42689, offset_id=offset_id, offset_date=0,
-        #                                           add_offset=0, limit=1400, max_id=0, min_id=0, hash=0))
-        total_comments = comments.count
-
-        if comments:
-            if comments.chats:
-                comments_channels_count = comments_channels_count + len(comments.chats)
-                for c in comments.chats:
-                    pass
-                    # print(type(c))
-                    # pprint(c.to_dict())
-            if hasattr(comments, 'users'):
-                comments_users_count = comments_users_count + len(comments.users)
-                pass
-                for u in comments.users:
-                    user = Stat_post()
-                    user.tg_user_id = u.id
-                    user.username = u.username
-                    user.first_name = u.first_name
-                    user.last_name = u.last_name
-                    user.phone = u.phone
-                    user.premium = u.premium
-                    user.scam = u.scam
-                    user.verified = u.verified
-
-                    # TODO: 1. Добавить параметры из tg-объекта
-                    user.is_joined_by_link = True # if else id False
-                    #joined_at = u.j
-                    #left_at = u.l
-                    #tg_channel_id = u.t
-                    # end todo 1
-
-                    await sql.asyncSQLDataService
-                    await sql.store_user(user)
-                    await sql.close()
-
-            if hasattr(comments, 'messages'):
-                comments_messages_count = comments_messages_count + len(comments.messages)
-                for m in comments.messages:
-                    counter_comments += 1
-                    offset_id = m.id
-                    # print(total_comments-counter_comments, m.id, str(m.message).replace('\n', '')[:35])
-                pass
-                if counter_comments >= total_comments:
-                    return comments_channels_count, comments_users_count, comments_messages_count
 
 
 async def get_posts(client, id, max_posts=1500, parent=None):
@@ -260,6 +203,66 @@ async def get_posts(client, id, max_posts=1500, parent=None):
     return id, int(time() - start), post_list
 
 
+async def get_comments(client, id, msg_id, max=300, sql=None):
+    comments = None
+    comments_channels_count = 0
+    comments_users_count = 0
+    comments_messages_count = 0
+    total_comments = 0
+    counter_comments = 0
+    offset_id = 0
+
+    while True:
+        pass
+        comments = await client(GetRepliesRequest(peer=id, msg_id=msg_id, offset_id=offset_id, offset_date=0,
+                                                  add_offset=0, limit=400, max_id=0, min_id=0, hash=0))
+        # comments = await client(GetRepliesRequest(peer=id, msg_id=42689, offset_id=offset_id, offset_date=0,
+        #                                           add_offset=0, limit=1400, max_id=0, min_id=0, hash=0))
+        total_comments = comments.count
+
+        if comments:
+            if comments.chats:
+                comments_channels_count = comments_channels_count + len(comments.chats)
+                for c in comments.chats:
+                    pass
+                    # print(type(c))
+                    # pprint(c.to_dict())
+            if hasattr(comments, 'users'):
+                comments_users_count = comments_users_count + len(comments.users)
+                pass
+                for u in comments.users:
+                    user = Stat_post()
+                    user.tg_user_id = u.id
+                    user.username = u.username
+                    user.first_name = u.first_name
+                    user.last_name = u.last_name
+                    user.phone = u.phone
+                    user.premium = u.premium
+                    user.scam = u.scam
+                    user.verified = u.verified
+
+                    # TODO: 1. Добавить параметры из tg-объекта
+                    user.is_joined_by_link = True # if else id False
+                    #joined_at = u.j
+                    #left_at = u.l
+                    #tg_channel_id = u.t
+                    # end todo 1
+
+                    await sql.asyncSQLDataService
+                    await sql.store_user(user)
+                    await sql.close()
+
+            if hasattr(comments, 'messages'):
+                comments_messages_count = comments_messages_count + len(comments.messages)
+                for m in comments.messages:
+                    counter_comments += 1
+                    offset_id = m.id
+                    # print(total_comments-counter_comments, m.id, str(m.message).replace('\n', '')[:35])
+                pass
+                if counter_comments >= total_comments:
+                    return comments_channels_count, comments_users_count, comments_messages_count
+
+
 async def tg_collect_flow():
     # groups = ['test_channel_analytics']
     # api_id = clientAPI.api_id
@@ -275,14 +278,12 @@ async def tg_collect_flow():
     client.parse_mode = 'html'
 
     # await client.start()
-
     async with client:
-        channels = get_bd_channels()
+        channels = get_db_channels()
         for channel_id, channel_name in channels:
             # id = await read_channels(client, 'https://t.me/cianoid_parser')
             # id = await read_channels(client, 'RIA/Sputnik')
             id = await read_channels(client, channel_name)
-
 
             # id, link = await read_channels(client, 'Заметки')
             res = await client.get_me(id)
@@ -294,7 +295,7 @@ async def tg_collect_flow():
             # id = -1002111052057
             # start = time()  # точка отсчета времени
             posts = await get_posts(client, id, max_posts=30)
-            print(type(posts))
+            # print(type(posts))
             # pprint(posts.to_dict())
             items = client.get_dialogs(id)
             # write_comments(id, 'Тест1')
@@ -307,8 +308,7 @@ async def tg_collect_flow():
                 id, reverse=True)
 
             async for item in messages:
-                print(item)
-                print(item.date)
+                print(f'\n{item.date}: {item}')
                 if item.media:
                     try:
                         print(item.media.document.mime_type)
@@ -317,7 +317,7 @@ async def tg_collect_flow():
 
                 if item.id == 5:
                     pass
-                print(item.message)
+                print(f'Message: {item.message}')
                 print(f'Просмотры (всего): {item.views}')
 
         client.run_until_disconnected()
