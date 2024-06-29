@@ -7,6 +7,7 @@ from telethon import functions, types, events
 from telethon.sessions import StringSession
 from telethon.sync import TelegramClient
 from telethon.tl.functions.messages import GetRepliesRequest
+from pprint import pprint
 
 import config
 from backend.asyncSQLDataService import asyncSQLDataService
@@ -27,7 +28,7 @@ async def task_authorize(phone):
             tg_client = get_test_client()
 
         if tg_client.is_user_authorized():
-            tg_client.connect()
+            await tg_client.connect()
             res = True
         else:
             res = False
@@ -46,7 +47,7 @@ async def read_channels(client, search_name):
             # print(id)
             try:
                 item = await client.get_entity(id)
-                # print(item)
+                # pprint(item)
                 return item.id
             except Exception as e:
                 print(e)
@@ -167,7 +168,7 @@ async def get_posts(client, id, max_posts=1500, parent=None):
             elif type(p) == types.Message:
 
                 if cntr == 0:
-                    print(f'[{pp}{id}] START reading last {max_posts} messages. Total message {total_messages} '
+                    print(f'[{pp} {id}] START reading last {max_posts} messages. Total message {total_messages} '
                           f'in chat: {str(p.chat.title)[:25]} ')
 
                 post.message = p.message
@@ -178,7 +179,7 @@ async def get_posts(client, id, max_posts=1500, parent=None):
                     # print((p.date + timedelta(hours=3)).strftime('%Y-%m-%d %H:%M:%S'))
                     post.date_of_post = (p.date + timedelta(hours=3)).strftime('%Y-%m-%d %H:%M:%S')
                 if p.reactions:
-                    # print(p.reactions.to_dict())
+                    # pprint(p.reactions.to_dict())
                     for res in p.reactions.results:
                         react = Stat_reaction()
                         react.reaction_count = res.count
@@ -191,7 +192,7 @@ async def get_posts(client, id, max_posts=1500, parent=None):
                             print(f'Ошибка извлечения реакции: {e}')
                         react.tg_channel_id = id
                         react.tg_post_id = p.id
-                        await sql.init(config.db_name, forceCreation=True)
+                        await sql.init(config.db_name)  # , forceCreation=True
                         await sql.store_react(react)
                         await sql.close()
 
@@ -232,8 +233,8 @@ async def get_posts(client, id, max_posts=1500, parent=None):
                 # pprint(p.to_dict())
                 post.tg_channel_id = id
                 post.timestamp = datetime.today().replace(microsecond=0)
-                post.link = 'https://t.me/c/' + str(id)+'/'+str(p.id)
-                await sql.init(config.db_name, forceCreation=True)
+                post.link = 'https://t.me/c/' + str(id) + '/' + str(p.id)
+                await sql.init(config.db_name)  # , forceCreation=True
                 await sql.store_post(post)
                 await sql.close()
                 post_list.append(post)
@@ -241,13 +242,13 @@ async def get_posts(client, id, max_posts=1500, parent=None):
                 # print(f'[{pp}][{id}]', p.chat.title, p.id, str(p.message).replace('\n', '')[:35], ' [users:', post.comments_users_count, ']  [mess:', post.comments_messages_count, ']')
 
             if cntr % 25 == 0:
-                print(f'[{pp}{id} ] curent post: {post.tg_post_id} mess: {cntr} from {total_messages}  running (sec): ',
-                      int(time() - start))
+                print(f'[{pp} {id}] curent post: {post.tg_post_id}, mess: {cntr} from {total_messages}, running (sec): '
+                      f'{int(time() - start)}')
 
             cntr += 1
             if cntr >= max_posts:
-                print(f'[{pp}{id} ] FINISH read {cntr} messages, TOTAL time:', int(time() - start),
-                      f'sec, [max messages: {maximum_messages} in tg_post_id: {maximum_message_post}], '
+                print(f'[{pp} {id}] FINISH read {cntr} messages, TOTAL time: {int(time() - start)} sec, '
+                      f'[max messages: {maximum_messages} in tg_post_id: {maximum_message_post}], '
                       f'[max users: {maximum_users} in {maximum_users_post}]')
                 return id, int(time() - start), post_list
             else:
@@ -255,7 +256,7 @@ async def get_posts(client, id, max_posts=1500, parent=None):
 
         offset_id = post.tg_post_id
         # print(f'offset: {offset_id} total: {total_messages} remain:{message_remain}')
-    print(f'[{pp}{id} ] TOTAL time: ', int(time() - start))
+    print(f'[{pp} {id}] TOTAL time: {int(time() - start)}')
     return id, int(time() - start), post_list
 
 
@@ -273,49 +274,53 @@ async def tg_collect_flow():
 
     client.parse_mode = 'html'
 
-    await client.start()
+    # await client.start()
 
-    channels = get_bd_channels()
-    for channel_id, channel_name in channels:
-        # id = await read_channels(client, 'https://t.me/cianoid_parser')
-        # id = await read_channels(client, 'RIA/Sputnik')
-        id = await read_channels(client, channel_name)
+    async with client:
+        channels = get_bd_channels()
+        for channel_id, channel_name in channels:
+            # id = await read_channels(client, 'https://t.me/cianoid_parser')
+            # id = await read_channels(client, 'RIA/Sputnik')
+            id = await read_channels(client, channel_name)
 
 
-        # id, link = await read_channels(client, 'Заметки')
-        res = await client.get_me(id)
-        # client.send_message(entity=79258661639, message='TEST')
-        # await client.send_message(entity=1392284754, message='TEST')
-        # client.run_until_disconnected()
-        # exit()
+            # id, link = await read_channels(client, 'Заметки')
+            res = await client.get_me(id)
+            # client.send_message(entity=79258661639, message='TEST')
+            # await client.send_message(entity=1392284754, message='TEST')
+            # client.run_until_disconnected()
+            # exit()
 
-        # id = -1002111052057
-        # start = time()  # точка отсчета времени
-        posts = await get_posts(client, id, max_posts=30)
-        print(type(posts))
-        # pprint(posts.to_dict())
-        items = client.get_dialogs(id)
-        # write_comments(id, 'Тест1')
+            # id = -1002111052057
+            # start = time()  # точка отсчета времени
+            posts = await get_posts(client, id, max_posts=30)
+            print(type(posts))
+            # pprint(posts.to_dict())
+            items = client.get_dialogs(id)
+            # write_comments(id, 'Тест1')
 
-        dp = client.get_entity(id)
-        # end = time() - start  # собственно время работы программы
-        # print(id, end)  # вывод времени
-        # if dp.title: print(dp.title)
-        messages = client.iter_messages(
-            id, reverse=True)
+            dp = client.get_entity(id)
+            # end = time() - start  # собственно время работы программы
+            # print(id, end)  # вывод времени
+            # if dp.title: print(dp.title)
+            messages = client.iter_messages(
+                id, reverse=True)
 
-        async for item in messages:
-            print(item)
-            print(item.date)
-            if item.media:
-                print(item.media.document.mime_type)
+            async for item in messages:
+                print(item)
+                print(item.date)
+                if item.media:
+                    try:
+                        print(item.media.document.mime_type)
+                    except Exception as e:
+                        print(f'Ошибка "obj.media.document.mime_type": {e}')
 
-            if item.id == 5:
-                pass
-            print(item.message)
-            print(item.views)
+                if item.id == 5:
+                    pass
+                print(item.message)
+                print(f'Просмотры (всего): {item.views}')
 
-    client.run_until_disconnected()
+        client.run_until_disconnected()
 
 
 if __name__ == "__main__":

@@ -22,8 +22,8 @@ class asyncSQLDataService(object):
     async def init(self, databaseName=db_name, forceCreation=False):
         sys.stdout.reconfigure(encoding='utf-8')
         # self.connection = await aiosqlite.connect(database=databaseName, check_same_thread=False)
-        self.connection = await get_db_connection()
-        self.cursor = await self.connection.cursor()
+        self.connection = get_db_connection()       # await
+        self.cursor = self.connection.cursor()      # await # psycopg2.extensions can't be used in 'await' expression
         self.cursor.connection.autocommit = True
         if forceCreation:
             await self._configure_table_posts()
@@ -32,7 +32,10 @@ class asyncSQLDataService(object):
 
     async def close(self):
         # print('close connection', self.connection)
-        await self.connection.close()
+        try:
+            await self.connection.close()
+        except TypeError:
+            self.connection.close()
 
     async def store_user(self, user: Stat_user) -> Stat_user:
         res = await self.get_user_id(user)
@@ -59,8 +62,12 @@ class asyncSQLDataService(object):
             return await self._update_post(post)
 
     async def get_post_id(self, post: Stat_post) -> Stat_post:
-        await self.cursor.execute(Constants.SQL_SELECT_POST_BY_ID, (post.tg_channel_id, post.tg_post_id, post.views,))
-        record = await self.cursor.fetchone()
+        try:
+            await self.cursor.execute(Constants.SQL_SELECT_POST_BY_ID, (post.tg_channel_id, post.tg_post_id, post.views,))
+            record = await self.cursor.fetchone()
+        except TypeError:
+            self.cursor.execute(Constants.SQL_SELECT_POST_BY_ID, (post.tg_channel_id, post.tg_post_id, post.views,))
+            record = self.cursor.fetchone()
         if record == None:
             return None
         result = await self._dbrecord_to_post(record)
@@ -243,28 +250,50 @@ class asyncSQLDataService(object):
         return user
 
     async def _insert_post(self, post: Stat_post) -> Stat_post:
-        await self.cursor.execute(Constants.SQL_INSERT_POSTS, (
-            # fixed from new structure
-
-            post.timestamp,
-            post.tg_post_id,
-            post.tg_channel_id,
-            post.message,
-            post.views,
-            post.views_1h,
-            post.views_24h,
-            post.total_reactions_count,
-            post.reactions_1h,
-            post.reactions_24h,
-            post.comments_users_count,
-            post.comments_channels_count,
-            post.comments_messages_count,
-            post.comments_messages_count_1h,
-            post.comments_messages_count_24h,
-            post.link,
-            post.media,
-            post.forwards,
-        ))
+        try:
+            await self.cursor.execute(Constants.SQL_INSERT_POSTS, (
+                # fixed from new structure
+                post.timestamp,
+                post.tg_post_id,
+                post.tg_channel_id,
+                post.message,
+                post.views,
+                post.views_1h,
+                post.views_24h,
+                post.total_reactions_count,
+                post.reactions_1h,
+                post.reactions_24h,
+                post.comments_users_count,
+                post.comments_channels_count,
+                post.comments_messages_count,
+                post.comments_messages_count_1h,
+                post.comments_messages_count_24h,
+                post.link,
+                post.media,
+                post.forwards,
+            ))
+        except TypeError:
+            self.cursor.execute(Constants.SQL_INSERT_POSTS, (
+                # fixed from new structure
+                post.timestamp,
+                post.tg_post_id,
+                post.tg_channel_id,
+                post.message,
+                post.views,
+                post.views_1h,
+                post.views_24h,
+                post.total_reactions_count,
+                post.reactions_1h,
+                post.reactions_24h,
+                post.comments_users_count,
+                post.comments_channels_count,
+                post.comments_messages_count,
+                post.comments_messages_count_1h,
+                post.comments_messages_count_24h,
+                post.link,
+                post.media,
+                post.forwards,
+            ))
         post.pk = self.cursor.lastrowid
         # await self.cursor.connection.commit()
         return post
@@ -333,13 +362,13 @@ class Constants:
     SQL_CREATE_INDEX_USER_TG = 'CREATE INDEX IF NOT EXISTS idx_user_id ON stat_user (tg_user_id)'
     SQL_INSERT_USER_TG = f'INSERT INTO {users} (timestamp, joined_at, left_at, tg_user_id, tg_channel_id, firstName,' \
                          'lastName, username, phone, scam, premium, verified, is_joined_by_link) ' \
-                         'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    SQL_UPDATE_USER_TG = f'UPDATE {users} SET pk=?, timestamp=?, joined_at=?, left_at=?, tg_user_id=?, tg_channel_id=?,' \
-                         'firstName=?, lastName=?, username=?, phone=?, scam=?, premium=?, verified=?, is_joined_by_link=?' \
-                         'WHERE tg_user_id=?'
+                         'VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'
+    SQL_UPDATE_USER_TG = f'UPDATE {users} SET pk=%s, timestamp=%s, joined_at=%s, left_at=%s, tg_user_id=%s, tg_channel_id=%s,' \
+                         'firstName=%s, lastName=%s, username=%s, phone=%s, scam=%s, premium=%s, verified=%s, is_joined_by_link=%s' \
+                         'WHERE tg_user_id=%s'
     SQL_SELECT_USER_TG_BY_ID = 'SELECT pk, timestamp, joined_at, left_at, tg_user_id, tg_channel_id, firstName, ' \
                                'lastName, username, phone, scam, premium, verified, is_joined_by_link ' \
-                               'FROM stat_user WHERE tg_user_id=?'
+                               'FROM stat_user WHERE tg_user_id=%s'
 
     # Consumption
     SQL_CREATE_TABLE_POSTS = f'''
@@ -357,7 +386,7 @@ class Constants:
         reactions_24h INTEGER,
         comments_users_count INTEGER,
         comments_channels_count INTEGER,        
-        comments_message_count INTEGER,
+        comments_messages_count INTEGER,
         comments_messages_count_1h INTEGER,
         comments_messages_count_24h INTEGER,
         link TEXT,
@@ -368,17 +397,17 @@ class Constants:
     SQL_CREATE_INDEX_POSTS_ID = 'CREATE INDEX IF NOT EXISTS idx_post_id ON POSTS (tg_channel_id, tg_post_id)'
     SQL_INSERT_POSTS = f'INSERT INTO {posts} (timestamp, tg_post_id, tg_channel_id, message, views, views_1h, views_24h,' \
                        'total_reactions_count, reactions_1h, reactions_24h, comments_users_count, comments_channels_count,' \
-                       'comments_message_count, comments_messages_count_1h, comments_messages_count_24h, link, media, forwards)' \
-                       ' VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    SQL_UPDATE_POSTS = f'UPDATE {posts} SET timestamp=?, tg_post_id=?, tg_channel_id=?, message=?, views=?, views_1h=?,' \
-                       'views_24h=?, total_reactions_count=?, reactions_1h=?, reactions_24h=?, comments_users_count=?,' \
-                       'comments_channels_count=?, comments_message_count=?, comments_messages_count_1h=?,' \
-                       'comments_messages_count_24h=?, link=?, media=?, forwards=?' \
-                       'WHERE tg_channel_id=? and tg_post_id=? and pk=?'
-    SQL_SELECT_POST_BY_ID = 'SELECT pk, timestamp, tg_post_id, tg_channel_id, message, views, views_1h, views_24h,' \
-                            'total_reactions_count, reactions_1h, reactions_24h, comments_users_count, comments_channels_count,' \
-                            'comments_message_count, comments_messages_count_1h, comments_messages_count_24h, link, media, forwards ' \
-                            f'FROM {posts} WHERE tg_channel_id=? and tg_post_id=? and tg_views=?'
+                       'comments_messages_count, comments_messages_count_1h, comments_messages_count_24h, link, media, forwards)' \
+                       ' VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'
+    SQL_UPDATE_POSTS = f'UPDATE {posts} SET timestamp=%s, tg_post_id=%s, tg_channel_id=%s, message=%s, views=%s, views_1h=%s,' \
+                       'views_24h=%s, total_reactions_count=%s, reactions_1h=%s, reactions_24h=%s, comments_users_count=%s,' \
+                       'comments_channels_count=%s, comments_messages_count=%s, comments_messages_count_1h=%s,' \
+                       'comments_messages_count_24h=%s, link=%s, media=%s, forwards=%s' \
+                       'WHERE tg_channel_id=%s and tg_post_id=%s and pk=%s'
+    SQL_SELECT_POST_BY_ID = 'SELECT pk, timestamp, tg_post_id, tg_channel_id, message, views, views_1h, views_24h, ' \
+                            'total_reactions_count, reactions_1h, reactions_24h, comments_users_count, comments_channels_count, ' \
+                            'comments_messages_count, comments_messages_count_1h, comments_messages_count_24h, link, media, forwards ' \
+                            f'FROM {posts} WHERE tg_channel_id=%s and tg_post_id=%s and views=%s'
 
     SQL_CREATE_TABLE_REACTIONS = f'''
         CREATE TABLE IF NOT EXISTS {reactions} (
@@ -393,10 +422,10 @@ class Constants:
     '''
     SQL_CREATE_INDEX_REACT_ID = f'CREATE INDEX IF NOT EXISTS idx_react_id ON {reactions} (tg_channel_id, tg_post_id)'
     SQL_INSERT_REACTIONS = f'INSERT INTO {reactions} (tg_channel_id, tg_post_id, reaction_count, reaction_emoticon,' \
-                           'reaction_emoticon_code, timestamp) VALUES (?, ?, ?, ?, ?, ?)'
-    SQL_UPDATE_REACTIONS = f'UPDATE {reactions} SET reaction_count=? , reaction_emoticon=?, timestamp=? ' \
-                           'WHERE tg_channel_id=? and tg_post_id=? and reaction_count!=? and reaction_emoticon_code=? and pk=?'
-    SQL_SELECT_REACTIONS_BY_ID = f'SELECT * FROM {reactions} WHERE tg_channel_id=? and tg_post_id= ? and reaction_emoticon_code=?'
+                           'reaction_emoticon_code, timestamp) VALUES (%s, %s, %s, %s, %s, %s)'
+    SQL_UPDATE_REACTIONS = f'UPDATE {reactions} SET reaction_count=%s , reaction_emoticon=%s, timestamp=%s ' \
+                           'WHERE tg_channel_id=%s and tg_post_id=%s and reaction_count!=%s and reaction_emoticon_code=%s and pk=%s'
+    SQL_SELECT_REACTIONS_BY_ID = f'SELECT * FROM {reactions} WHERE tg_channel_id=%s and tg_post_id= %s and reaction_emoticon_code=%s'
 
 
 # async def run_async():
