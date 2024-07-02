@@ -24,7 +24,6 @@ async def task_authorize(phone):
     session_data = get_session_from_db(phone)
     if session_data:
         api_id, api_hash, session_str = session_data
-
         try:
             tg_client = TelegramClient(StringSession(session_str), api_id, api_hash)
         except Exception as e:
@@ -121,13 +120,10 @@ async def read_channels(client, search_name):
     """
     try:
         if type(int(search_name)) == int:
-            pass
             search_name = str(search_name).replace('-100', '')
             id = int(search_name)
-            # print(id)
             try:
                 item = await client.get_entity(id)
-                # pprint(item)
                 return item.id
             except Exception as e:
                 print(e)
@@ -141,7 +137,7 @@ async def read_channels(client, search_name):
         try:
             username = item.username
         except Exception as e:
-            # print(f'Ошибка получения username для "{dial.title}": {e}')
+            print(f'Ошибка получения username для "{dial.title}": {e}')
             username = None
 
         suffix = f'{Back.GREEN}{Fore.BLACK} {dial.id} {dial.title} username: {username}, user: {dial.is_user}, ' \
@@ -187,8 +183,6 @@ async def get_posts(client, id, max_posts=1500, parent=None, hours=0):
     sql = asyncSQLDataService()
     await sql.init(config.db_name)  # , forceCreation=True
 
-    # while offset_id:
-    #     pass
     posts = client.iter_messages(id, limit=limit, reverse=reverse, offset_id=offset_id - 1)
 
     async for p in posts:
@@ -292,9 +286,6 @@ async def get_posts(client, id, max_posts=1500, parent=None, hours=0):
         else:
             pass
 
-        # offset_id = post.tg_post_id
-        # print(f'offset: {offset_id} total: {total_messages} remain:{message_remain}')
-
     await sql.close()
     print(f'[{pp} {id}] TOTAL time: {int(time() - start)}')
     return id, int(time() - start), post_list
@@ -312,8 +303,6 @@ async def get_comments(client, id, msg_id, limit=400, db=None):
     while True:
         comments = await client(GetRepliesRequest(peer=id, msg_id=msg_id, offset_id=offset_id, offset_date=0,
                                                   add_offset=0, limit=limit, max_id=0, min_id=0, hash=0))
-        # comments = await client(GetRepliesRequest(peer=id, msg_id=42689, offset_id=offset_id, offset_date=0,
-        #                                           add_offset=0, limit=1400, max_id=0, min_id=0, hash=0))
         total_comments = comments.count
 
         if comments:
@@ -358,26 +347,16 @@ async def get_comments(client, id, msg_id, limit=400, db=None):
                     return comments_channels_count, comments_users_count, comments_messages_count
 
 
-async def tg_collect_flow(hours=0):
+async def collect_data(client, channels, hours=0):
     """
+    :param client: TelegramClient
+    :param channels: list of channels
     :param hours: int --  период времени (часы) для учета статистики, 0 - первый запуск
-    :return: сервис сбора информации по telegram-каналам
+    :return: statistic collection service for telegram-channels
     """
-    cfg = dotenv_values('.env')
-    phone_number = cfg['PHONE']
-
-    client = await task_authorize(phone_number)                                     # сессия из БД
-    if not client:
-        client = TelegramClient(phone_number, cfg['API_ID'], cfg['API_HASH'])       # новая сессия
-    client.parse_mode = 'html'
-
-    # await client.start()
     async with client:
-        channels = get_db_channels()
         for channel_id, channel_name in channels:
             try:
-                # id = await read_channels(client, 'https://t.me/cianoid_parser')
-                # id = await read_channels(client, 'RIA/Sputnik')
                 id = await read_channels(client, channel_name)
             except Exception as e:
                 id = await read_channels(client, channel_id)
@@ -402,7 +381,7 @@ async def tg_collect_flow(hours=0):
             posts = await get_posts(client, id, max_posts=50, hours=hours)
 
             if post_last_id != posts[2][0].tg_post_id:  # :
-                # запуск запланированной задачи
+                # запуск запланированных задач
                 try:
                     service_run()
                     print('Запуск сервиса "tg_collect": запуск...')
@@ -411,17 +390,7 @@ async def tg_collect_flow(hours=0):
             else:
                 print('Сервис "tg_collect" не запланирован: новых постов не было.')
 
-            # print(type(posts))
-            # pprint(posts.to_dict())
-            # dialogs = client.get_dialogs(id)
-            # write_comments(id, 'Тест1')
-
-            # dp = await client.get_entity(id)
-            # end = time() - start  # собственно время работы программы
-            # print(id, end)  # вывод времени
-            # if dp.title: print(dp.title)
-
-            # Подписки/отписки пользователей
+            # Подписки/отписки пользователей (сбор и запись в БД)
             users_actions = await set_user_actions(client, channel_id)
 
             messages = client.iter_messages(
@@ -441,6 +410,20 @@ async def tg_collect_flow(hours=0):
                 print(f'Просмотры: {item.views}')
 
         # client.run_until_disconnected()
+
+
+async def tg_collect_flow():
+    conf = dotenv_values('.env')
+    phone_number = conf['PHONE']
+
+    clt = await task_authorize(phone_number)                                         # сессия из БД
+    if not clt:
+        clt = TelegramClient(phone_number, conf['API_ID'], conf['API_HASH'])         # новая сессия
+    clt.parse_mode = 'html'
+    # await clt.start()
+
+    for ch in get_db_channels():
+        await collect_data(clt, (ch,), hours=0)
 
 
 if __name__ == "__main__":
