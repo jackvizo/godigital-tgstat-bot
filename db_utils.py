@@ -61,3 +61,18 @@ def get_db_channels():
     cursor.close()
     conn.close()
     return channels
+
+
+def get_last_db_post_id(channel_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT tg_post_id
+        FROM stat_post
+        WHERE tg_channel_id = %s
+        ORDER BY tg_post_id DESC
+    """, (channel_id,))
+    post = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return post[0] if post else post

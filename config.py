@@ -21,5 +21,5 @@ db_engine = f"{dialect}+{driver}://{user}:{password}@{host}:{port}/{db_name}"
 # telegram (takes from run file arguments)
 # api_id = ""
 # api_hash = ""
-phone_number = ''
-phone_test_number = ''
+phone_number = ""
+phone_test_number = ""

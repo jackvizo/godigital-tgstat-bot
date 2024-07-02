@@ -21,14 +21,17 @@ if __name__ == "__main__":
         client.connect()
 
         if client.is_user_authorized():
-            print(f'Ok, session with phone_number {args.phone_number} is connected!')
+             print(f'Ok, session with phone_number {args.phone_number} is connected!')
         else:
             print('Необходима авторизация:')
 
         with client:
-            tg_channel = client.get_entity(args.tg_channel_name)
-            save_channel_to_db(tg_channel.id, tg_channel.title)
-            print(f"Channel {args.tg_channel_name} saved to database.")
+            try:
+                tg_channel = client.get_entity(args.tg_channel_name)
+                save_channel_to_db(tg_channel.id, tg_channel.title)
+                print(f"Channel {args.tg_channel_name} saved to database.")
+            except Exception as e:
+                print(f'Ошибка запроса канала "{args.tg_channel_name}": {e}')
     else:
         print("No active session found for the given phone number.")
 
