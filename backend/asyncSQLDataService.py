@@ -185,23 +185,24 @@ class asyncSQLDataService(object):
         result = Stat_post()
         result.pk = record[0]
         # result.timestamp = record[1]
-        result.tg_post_id = record[1]
-        result.tg_channel_id = record[2]
-        result.message = record[3]
-        result.views = record[4]
-        result.views_1h = record[5]
-        result.views_24h = record[6]
-        result.total_reactions_count = record[7]
-        result.reactions_1h = record[8]
-        result.reactions_24h = record[9]
-        result.comments_users_count = record[10]
-        result.comments_channels_count = record[11]
-        result.comments_messages_count = record[12]
-        result.comments_messages_count_1h = record[13]
-        result.comments_messages_count_24h = record[14]
-        result.link = record[15]
-        result.media = record[16]
-        result.forwards = record[17]
+        result.date_of_post = record[1]
+        result.tg_post_id = record[2]
+        result.tg_channel_id = record[3]
+        result.message = record[4]
+        result.views = record[5]
+        result.views_1h = record[6]
+        result.views_24h = record[7]
+        result.total_reactions_count = record[8]
+        result.reactions_1h = record[9]
+        result.reactions_24h = record[10]
+        result.comments_users_count = record[11]
+        result.comments_channels_count = record[12]
+        result.comments_messages_count = record[13]
+        result.comments_messages_count_1h = record[14]
+        result.comments_messages_count_24h = record[15]
+        result.link = record[16]
+        result.media = record[17]
+        result.forwards = record[18]
         return result
 
     async def _insert_user(self, user: Stat_user) -> Stat_user:
@@ -249,6 +250,7 @@ class asyncSQLDataService(object):
     async def _insert_post(self, post: Stat_post) -> Stat_post:
         values = (  # fixed from new scheme
             # obj.timestamp,
+            post.date_of_post,
             post.tg_post_id,
             post.tg_channel_id,
             post.message,
@@ -276,6 +278,7 @@ class asyncSQLDataService(object):
     async def _update_post(self, post: Stat_post) -> Stat_post:
         values = (  # fixed from new scheme
                 # obj.timestamp,
+                post.date_of_post,
                 post.tg_post_id,
                 post.tg_channel_id,
                 post.message,
@@ -350,7 +353,8 @@ class Constants:
     SQL_CREATE_TABLE_POSTS = f'''
         CREATE TABLE IF NOT EXISTS {posts} (
         pk INTEGER PRIMARY KEY autoincrement,
-        timestamp DATETIME, 
+        timestamp DATETIME,
+        date_of_post TEXT, 
         tg_post_id BIGINT,
         tg_channel_id BIGINT,                       
         message TEXT,     
@@ -371,16 +375,16 @@ class Constants:
         );
     '''
     SQL_CREATE_INDEX_POSTS_ID = 'CREATE INDEX IF NOT EXISTS idx_post_id ON POSTS (tg_channel_id, tg_post_id)'
-    SQL_INSERT_POSTS = f'INSERT INTO {posts} (tg_post_id, tg_channel_id, message, views, views_1h, views_24h,' \
+    SQL_INSERT_POSTS = f'INSERT INTO {posts} (date_of_post, tg_post_id, tg_channel_id, message, views, views_1h, views_24h,' \
                        'total_reactions_count, reactions_1h, reactions_24h, comments_users_count, comments_channels_count,' \
                        'comments_messages_count, comments_messages_count_1h, comments_messages_count_24h, link, media, forwards)' \
-                       ' VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING pk'
-    SQL_UPDATE_POSTS = f'UPDATE {posts} SET tg_post_id=%s, tg_channel_id=%s, message=%s, views=%s, views_1h=%s,' \
+                       ' VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING pk'
+    SQL_UPDATE_POSTS = f'UPDATE {posts} SET date_of_post=%s, tg_post_id=%s, tg_channel_id=%s, message=%s, views=%s, views_1h=%s,' \
                        'views_24h=%s, total_reactions_count=%s, reactions_1h=%s, reactions_24h=%s, comments_users_count=%s,' \
                        'comments_channels_count=%s, comments_messages_count=%s, comments_messages_count_1h=%s,' \
                        'comments_messages_count_24h=%s, link=%s, media=%s, forwards=%s ' \
                        'WHERE pk=%s'    # tg_channel_id=%s and tg_post_id=%s and
-    SQL_SELECT_POST_BY_ID = 'SELECT pk, tg_post_id, tg_channel_id, message, views, views_1h, views_24h, ' \
+    SQL_SELECT_POST_BY_ID = 'SELECT pk, date_of_post, tg_post_id, tg_channel_id, message, views, views_1h, views_24h, ' \
                             'total_reactions_count, reactions_1h, reactions_24h, comments_users_count, comments_channels_count, ' \
                             'comments_messages_count, comments_messages_count_1h, comments_messages_count_24h, link, media, forwards ' \
                             f'FROM {posts} WHERE tg_channel_id=%s and tg_post_id=%s'    # and views=%s
