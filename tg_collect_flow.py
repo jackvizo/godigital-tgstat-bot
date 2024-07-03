@@ -17,12 +17,15 @@ async def task_authorize(phone):
     return await authorize(phone)
 
 @task
-async def task_collect_data(client, channels, hours=0):
-    await collect_data(client, channels, hours=0)
+async def task_collect_data(client, channels, **params):
+    print(f'---> parameters = {params}')
+    hours = 0 if 'hours' not in params else params['hours']
+    print(f'---> mode: {hours}')
+    await collect_data(client, channels, hours)
 
 
 @flow(name="tg-collect", log_prints=True)
-async def tg_collect_flow():
+async def tg_collect_flow(**params):
     conf = dotenv_values('.env')
     phone_number = conf['PHONE']
 
@@ -33,4 +36,4 @@ async def tg_collect_flow():
     # await clt.start()
 
     for ch in get_db_channels():
-        await task_collect_data(clt, (ch,), hours=0)
+        await task_collect_data(clt, (ch,), **params)

@@ -5,6 +5,7 @@ from prefect.client.schemas.schedules import RRuleSchedule
 from time import time
 
 from dotenv import dotenv_values
+from prefect.deployments import run_deployment
 from telethon import functions, types, events
 from telethon.sessions import StringSession
 from telethon.sync import TelegramClient
@@ -355,6 +356,7 @@ async def collect_data(client, channels, hours=0):
     :param hours: int --  период времени (часы) для учета статистики, 0 - первый запуск
     :return: statistic collection service for telegram-channels
     """
+    print(f'\t---> Режим выполнения - hours mode: {hours}')
     async with client:
         for channel_id, channel_name in channels:
             try:
@@ -407,13 +409,17 @@ async def collect_data(client, channels, hours=0):
 
 
 async def schedule_flow(service_name, date_start):
-    new_start = datetime.now() if (datetime.now() - date_start) > timedelta(hours=1) else date_start
+    new_start = datetime.now().replace(microsecond=0) if (datetime.now() - date_start) > timedelta(hours=1) else date_start
+    rrule_1 = new_start + timedelta(hours=1)
+    rrule_24 = new_start + timedelta(hours=24)
+    rrule_test = (new_start + timedelta(hours=1)) # .strftime(config.RRULE_FORMAT) # config.RRULE_TEST_SCHEDULE %
+
     print('Планирование запуска сервиса "tg_collect":')
-
-    rrule_str = config.RRULE_STR_SCHEDULE % (new_start + timedelta(hours=1)).strftime(config.RRULE_FORMAT)
-
     try:
-        # await collect_flow.serve(name="tg-collect", schedule=RRuleSchedule(rrule=rrule_str))   # уходит в ожидание
+        await run_deployment(name="tg-collect/1_hour", scheduled_time=rrule_test, timeout=0,
+                             parameters={'hours': 1})
+        # await run_deployment(name="tg-collect/24_hour", scheduled_time=rrule_24, timeout=0,
+        #                      parameters={'hours': 24})
 
         print(f'\t- запланирован запуск {service_name} на +1 час и +24 часа с даты {new_start.strftime("%")}')
     except Exception as e:
