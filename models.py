@@ -3,9 +3,9 @@ from sqlalchemy import create_engine, func, \
 
 from sqlalchemy.orm import declarative_base, relationship
 
-from config import db_engine
+from globals import DB_CONNECTION_STR
 
-engine = create_engine(db_engine)
+engine = create_engine(DB_CONNECTION_STR)
 
 Base = declarative_base()
 
