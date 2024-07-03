@@ -1,7 +1,8 @@
-import httpx
 from datetime import datetime, timedelta
 
-PREFECT_SERVER_URL = 'http://localhost:4200'
+import httpx
+
+from globals import PREFECT_SERVER_URL
 
 
 def get_deployment_by_flow_name(flow_name: str):
@@ -16,9 +17,12 @@ def get_deployment_by_flow_name(flow_name: str):
     return json[0] if json else None
 
 
-def create_scheduled_flow_run(deployment_id: str, scheduled_start_time: datetime, **hours):
+def create_scheduled_flow_run(deployment_id: str, scheduled_start_time: datetime, phone_number: str, channel_id: int):
     response = httpx.post(f"{PREFECT_SERVER_URL}/deployments/{deployment_id}/create_flow_run", json={
-        "parameters": hours,
+        "parameters": {
+            "phone_number": phone_number,
+            "channel_id": channel_id
+        },
         "state": {
             "type": "SCHEDULED",
             "state_details": {
@@ -26,15 +30,15 @@ def create_scheduled_flow_run(deployment_id: str, scheduled_start_time: datetime
             }
         }
     })
-    print(response)
+    return response
 
 
-def service_run():
+def schedule_tg_collect_flow_run(phone_number: str, channel_id: int):
     deployment = get_deployment_by_flow_name("tg_collect")
     deployment_id = deployment.get('id')
 
     scheduled_start_time_1 = datetime.utcnow() + timedelta(hours=1)
     scheduled_start_time_24 = datetime.utcnow() + timedelta(hours=24)
 
-    create_scheduled_flow_run(deployment_id, scheduled_start_time_1, hours=1)
-    create_scheduled_flow_run(deployment_id, scheduled_start_time_24, hours=24)
+    create_scheduled_flow_run(deployment_id, scheduled_start_time_1, phone_number, channel_id)
+    create_scheduled_flow_run(deployment_id, scheduled_start_time_24, phone_number, channel_id)

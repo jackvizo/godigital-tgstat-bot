@@ -1,6 +1,5 @@
 from sqlalchemy import create_engine, func, \
     Column, BigInteger, DateTime, Integer, String, Boolean, Text, ForeignKey, JSON
-
 from sqlalchemy.orm import declarative_base, relationship
 
 from globals import DB_CONNECTION_STR
@@ -31,13 +30,15 @@ class Stat_user(Base):
     verified = Column(Boolean)
     is_joined_by_link = Column(Boolean)
 
+    invite_link = Column(String)
+
 
 class Stat_post(Base):
     __tablename__ = 'stat_post'
 
     pk = Column(BigInteger, primary_key=True)
     timestamp = Column(DateTime, server_default=func.now())
-    date_of_post = Column(String(25))   # forgot in the schema.prism
+    date_of_post = Column(String(25))  # forgot in the schema.prism
 
     tg_post_id = Column(BigInteger)
     tg_channel_id = Column(BigInteger)
@@ -100,7 +101,7 @@ class Config__tg_bot_session_pool(Base):
     phone_number = Column(String(50))
     session_bytes = Column(Text)
 
-    status = Column(String(10), default='enabled')     # enabled/banned
+    status = Column(String(10), default='enabled')  # enabled/banned
 
     config__tg_channel = Column(BigInteger, ForeignKey('config__tg_channel.pk'))
     config__tg_channel_pk = Column(BigInteger)

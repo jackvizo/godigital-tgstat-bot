@@ -62,7 +62,6 @@ class AsyncSQLDataService(object):
             user.is_joined_by_link,
         )
         self.cursor.execute(Constants.SQL_UPSERT_USER_TG, values)
-        self.connection.commit()
         user.pk = self.cursor.fetchone()[0]
 
         return user
@@ -117,7 +116,6 @@ class AsyncSQLDataService(object):
             react.reaction_emoticon_code,
         )
         self.cursor.execute(Constants.SQL_UPSERT_REACTION, values)
-        self.connection.commit()
         react.pk = self.cursor.fetchone()[0]
 
         return react

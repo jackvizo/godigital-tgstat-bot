@@ -9,7 +9,8 @@ required_env_vars = [
     'DB_PORT',
     'DB_USER',
     'DB_PASSWORD',
-    'DB_NAME'
+    'DB_NAME',
+    'PREFECT_SERVER_URL'
 ]
 
 
@@ -25,6 +26,7 @@ DB_PORT = os.getenv("DB_PORT")
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_NAME = os.getenv("DB_NAME")
+PREFECT_SERVER_URL = os.getenv("PREFECT_SERVER_URL")
 IS_TEST = os.getenv("ENV_FILE") == '.env.test'
 
 TEST_API_ID = os.getenv("TEST_API_ID")
