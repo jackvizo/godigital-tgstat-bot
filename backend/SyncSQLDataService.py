@@ -3,50 +3,21 @@ from globals import TABLE_POSTS, TABLE_REACTIONS, TABLE_USERS
 from models import Stat_post, Stat_reaction, Stat_user
 
 
-async def _dbrecord_to_post(record) -> Stat_post:
-    # fixed from new scheme
-    result = Stat_post()
-    result.pk = record[0]
-    # result.timestamp = record[1]
-    result.tg_post_id = record[1]
-    result.tg_channel_id = record[2]
-    result.message = record[3]
-    result.views = record[4]
-    result.views_1h = record[5]
-    result.views_24h = record[6]
-    result.total_reactions_count = record[7]
-    result.reactions_1h = record[8]
-    result.reactions_24h = record[9]
-    result.comments_users_count = record[10]
-    result.comments_channels_count = record[11]
-    result.comments_messages_count = record[12]
-    result.comments_messages_count_1h = record[13]
-    result.comments_messages_count_24h = record[14]
-    result.link = record[15]
-    result.media = record[16]
-    result.forwards = record[17]
-    return result
-
-
-class AsyncSQLDataService(object):
+class SyncSQLDataService(object):
     connection = None
     cursor = None
 
     def __init__(self):
         pass
 
-    async def init(self):
+    def init(self):
         self.connection = create_db_connection()
         self.cursor = self.connection.cursor()
-        self.cursor.connection.autocommit = True
 
-    async def close(self):
-        try:
-            await self.connection.close()
-        except TypeError:
-            self.connection.close()
+    def close(self):
+        self.connection.close()
 
-    async def upsert_user(self, user: Stat_user) -> Stat_user:
+    def upsert_user(self, user: Stat_user) -> Stat_user:
         values = (
             user.joined_at,
             user.left_at,
@@ -66,15 +37,7 @@ class AsyncSQLDataService(object):
 
         return user
 
-    async def get_user_id(self, user: Stat_user) -> Stat_user or None:
-        self.cursor.execute(Constants.SQL_SELECT_USER_TG_BY_ID, (user.tg_user_id,))  # await
-        record = self.cursor.fetchone()  # await
-        if record is None:
-            return None
-        result = await self._dbrecord_to_user(record)
-        return result
-
-    async def upsert_post(self, post: Stat_post) -> Stat_post:
+    def upsert_post(self, post: Stat_post) -> Stat_post:
         values = (
             post.tg_post_id,
             post.tg_channel_id,
@@ -99,15 +62,7 @@ class AsyncSQLDataService(object):
 
         return post
 
-    async def get_post_id(self, post: Stat_post) -> Stat_post or None:
-        self.cursor.execute(Constants.SQL_SELECT_POST_BY_ID, (post.tg_channel_id, post.tg_post_id))  # , obj.views,
-        record = self.cursor.fetchone()
-        if record is None:
-            return None
-        result = await _dbrecord_to_post(record)
-        return result
-
-    async def upsert_react(self, react: Stat_reaction) -> Stat_reaction:
+    def upsert_react(self, react: Stat_reaction) -> Stat_reaction:
         values = (
             react.tg_post_id,
             react.tg_channel_id,
@@ -120,41 +75,14 @@ class AsyncSQLDataService(object):
 
         return react
 
-    @staticmethod
-    async def _dbrecord_to_react(record) -> Stat_reaction:
-        # fixed from new scheme
-        result = Stat_reaction()
-        result.pk = record[0]
-        # result.timestamp = record[1]
-        result.tg_post_id = record[1]
-        result.tg_channel_id = record[2]
-        result.reaction_count = record[3]
-        result.reaction_emoticon = record[4]
-        result.reaction_emoticon_code = record[5]
-        return result
+    def get_users_with_active_phone_numbers(self):
+        self.cursor.execute(Constants.SQL_GET_USERS_WITH_ACTIVE_PHONES)
+        result = self.cursor.fetchall()
+        self.cursor.close()
 
-    @staticmethod
-    async def _dbrecord_to_user(record) -> Stat_user:
-        # fixed from new scheme
-        result = Stat_user()
-        result.pk = record[0]
-        # result.timestamp = record[1]
-        result.joined_at = record[1]
-        result.left_at = record[2]
-        result.tg_user_id = record[3]
-        result.tg_channel_id = record[4]
-        result.first_name = record[5]
-        result.last_name = record[6]
-        result.username = record[7]
-        result.phone = record[8]
-        result.scam = record[9]
-        result.premium = record[10]
-        result.verified = record[11]
-        result.is_joined_by_link = record[12]
         return result
 
 
-# edited Constants
 class Constants:
     SQL_UPSERT_USER_TG = f'''
         INSERT INTO {TABLE_USERS} (
@@ -191,27 +119,6 @@ class Constants:
             AND reaction_emoticon_code=%s
     '''
 
-    SQL_SELECT_USER_TG_BY_ID = f'''
-        SELECT 
-            pk, 
-            joined_at, 
-            left_at, 
-            tg_user_id, 
-            tg_channel_id, 
-            first_name, 
-            last_name, 
-            username, 
-            phone, 
-            scam, 
-            premium, 
-            verified, 
-            is_joined_by_link 
-        FROM 
-            {TABLE_USERS} 
-        WHERE 
-            tg_user_id=%s
-    '''
-
     SQL_UPSERT_POST = f'''
         INSERT INTO {TABLE_POSTS} (
             tg_post_id, tg_channel_id, message, views, views_1h, views_24h,
@@ -239,33 +146,6 @@ class Constants:
         RETURNING pk
     '''
 
-    SQL_SELECT_POST_BY_ID = f'''
-        SELECT 
-            pk, 
-            tg_post_id, 
-            tg_channel_id, 
-            message, 
-            views, 
-            views_1h, 
-            views_24h, 
-            total_reactions_count, 
-            reactions_1h, 
-            reactions_24h, 
-            comments_users_count, 
-            comments_channels_count, 
-            comments_messages_count, 
-            comments_messages_count_1h, 
-            comments_messages_count_24h, 
-            link, 
-            media, 
-            forwards 
-        FROM 
-            {TABLE_POSTS} 
-        WHERE 
-            tg_channel_id=%s 
-            AND tg_post_id=%s
-    '''
-
     SQL_UPSERT_REACTION = f'''
         INSERT INTO {TABLE_REACTIONS} (
             tg_post_id, tg_channel_id, reaction_count, reaction_emoticon, reaction_emoticon_code
@@ -276,4 +156,28 @@ class Constants:
             reaction_emoticon = EXCLUDED.reaction_emoticon,
             reaction_emoticon_code = EXCLUDED.reaction_emoticon_code
         RETURNING pk
+    '''
+
+    SQL_GET_USERS_WITH_ACTIVE_PHONES = f'''
+    WITH enabled_sessions AS (
+        SELECT 
+            u.id AS user_id,
+            upn.phone_number,
+            ROW_NUMBER() OVER (PARTITION BY u.id ORDER BY upn.pk) AS rn
+        FROM 
+            user u
+        JOIN 
+            user_phone_number upn ON u.id = upn.user_id
+        JOIN 
+            config__tg_bot_session_pool ctbsp ON upn.phone_number = ctbsp.phone_number
+        WHERE 
+            ctbsp.status = 'enabled'
+    )
+    SELECT 
+        user_id,
+        phone_number
+    FROM 
+        enabled_sessions
+    WHERE 
+        rn = 1;
     '''

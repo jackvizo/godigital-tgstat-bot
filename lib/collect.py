@@ -5,7 +5,7 @@ from telethon import types
 from telethon.sync import TelegramClient
 from telethon.tl.functions.messages import GetRepliesRequest
 
-from backend.AsyncSQLDataService import AsyncSQLDataService
+from backend.SyncSQLDataService import SyncSQLDataService
 from models import Stat_post, Stat_reaction, Stat_user
 
 
@@ -249,16 +249,16 @@ async def collect_channel(tg_client, channel_id):
         return user_dict, post_list, react_list
 
 
-async def store_channel(sql: AsyncSQLDataService, user_dict, post_list, react_list):
+def store_channel(sql: SyncSQLDataService, user_dict, post_list, react_list):
     try:
         for user in user_dict.values():
-            await sql.upsert_user(user)
+            sql.upsert_user(user)
 
         for post in post_list:
-            await sql.upsert_post(post)
+            sql.upsert_post(post)
 
         for react in react_list:
-            await sql.upsert_react(react)
+            sql.upsert_react(react)
 
         sql.connection.commit()
     except Exception as e:

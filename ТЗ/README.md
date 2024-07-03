@@ -161,12 +161,11 @@ def task_collect_data(db, tg_client, tg_channel_name):
 5. Создать файл `main.py`
 
 ```python
-from tg_collect_flow import tg_collect_flow
-
+from tg_collect_flow import flow_collect_tg_channels_by_phone_number
 
 if __name__ == '__main__':
     # Скрипт будет запускаться каждые 5 минут
-    tg_collect_flow.serve(name="tg-collect", interval=300)
+    flow_collect_tg_channels_by_phone_number.serve(name="tg-collect", interval=300)
 ```
 
 6. Запустить сервер
