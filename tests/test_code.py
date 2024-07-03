@@ -1,6 +1,7 @@
 import asyncio
-
 from datetime import timedelta, datetime
+from prefect.client.schemas.schedules import RRuleSchedule
+
 from time import time
 
 from dotenv import dotenv_values
@@ -146,7 +147,7 @@ async def get_posts(client, id, max_posts=1500, parent=None, hours=0):
                 post.forwards = p.forwards
             if p.date:
                 # print((p.date + timedelta(hours=3)).strftime('%Y-%m-%d %H:%M:%S'))
-                post.date_of_post = p.date.strftime('%Y-%m-%d %H:%M:%S')  # (p.date + timedelta(hours=3))
+                post.date_of_post = p.date.strftime(config.DATE_FORMAT)  # (p.date + timedelta(hours=3))
             if p.reactions:
                 # pprint(p.reactions.to_dict())
                 for res in p.reactions.results:
@@ -370,28 +371,23 @@ async def collect_data(client, channels, hours=0):
             # await client.send_message(entity=1392284754, message='TEST')
             # client.run_until_disconnected()
             # exit()
-
             # id = -1002111052057
             # start = time()  # точка отсчета времени
 
             # Плановый запуск сервиса `tg-collect` на +1 час и +24 часа от даты создания нового поста
-            # самый новый пост из БД по параметру 'tg_post_id' (не по 'timestamp')
+            # новый пост на сервере
+            posts = await get_posts(client, id, max_posts=2500)
+            # новый пост в БД (по параметру 'tg_post_id', не по 'timestamp')
             post_last_id = get_last_db_post_id(id)
-            # сравнить с новым постом на сервере,
-            posts = await get_posts(client, id, max_posts=50, hours=hours)
-
-            if post_last_id != posts[2][0].tg_post_id:  # :
-                # запуск запланированных задач
-                try:
-                    service_run()
-                    print('Запуск сервиса "tg_collect": запуск...')
-                except Exception as e:
-                    print(f'Ошибка планового запуска сервиса "tg_collect_flow": {e}')
+            # Запуск задач через интервалы
+            if post_last_id != posts[2][0].tg_post_id:
+                await schedule_flow('tg-collect', datetime.strptime(posts[2][0].date_of_post, config.DATE_FORMAT))
             else:
                 print('Сервис "tg_collect" не запланирован: новых постов не было.')
 
             # Подписки/отписки пользователей (сбор и запись в БД)
             users_actions = await set_user_actions(client, channel_id)
+            print(f'Действия пользователей:\n{users_actions}')
 
             messages = client.iter_messages(
                 id, reverse=True)
@@ -409,16 +405,28 @@ async def collect_data(client, channels, hours=0):
                 print(f'Message: {item.message}')
                 print(f'Просмотры: {item.views}')
 
-        # client.run_until_disconnected()
+
+async def schedule_flow(service_name, date_start):
+    new_start = datetime.now() if (datetime.now() - date_start) > timedelta(hours=1) else date_start
+    print('Планирование запуска сервиса "tg_collect":')
+
+    rrule_str = config.RRULE_STR_SCHEDULE % (new_start + timedelta(hours=1)).strftime(config.RRULE_FORMAT)
+
+    try:
+        await collect_flow.serve(name="tg-collect", schedule=RRuleSchedule(rrule=rrule_str))   # уходит в ожидание
+
+        print(f'\t- запланирован запуск {service_name} на +1 час и +24 часа с даты {new_start.strftime("%")}')
+    except Exception as e:
+        print(f'Ошибка планировщика для "{service_name}": {e}')
 
 
 async def collect_flow():
     conf = dotenv_values('.env')
     phone_number = conf['PHONE']
 
-    clt = await authorize(phone_number)                                             # сессия из БД
+    clt = await authorize(phone_number)                                                 # сессия из БД
     if not clt:
-        clt = TelegramClient(phone_number, conf['API_ID'], conf['API_HASH'])        # новая сессия
+        clt = TelegramClient(phone_number, int(conf['API_ID']), conf['API_HASH'])       # новая сессия
     clt.parse_mode = 'html'
     # await clt.start()
 
