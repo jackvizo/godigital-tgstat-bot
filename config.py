@@ -19,8 +19,12 @@ DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 RRULE_FORMAT = '%Y%m%dT%H%M%S'
 
 # Планирование задач на +1 и +24 часа с даты поста
-RRULE_STR_SCHEDULE = 'DTSTART:%s RRULE:FREQ=HOURLY;INTERVAL=23;COUNT=2'
-# % (post_date + timedelta(hours=1)).strftime(RRULE_FORMAT)
+# RRULE_STR_SCHEDULE_1h = 'DTSTART:%s RRULE:FREQ=HOURLY;INTERVAL=1;COUNT=1'
+# RRULE_STR_SCHEDULE_24h = 'DTSTART:%s RRULE:FREQ=HOURLY;INTERVAL=24;COUNT=1'
+#
+# RRULE_TEST_SCHEDULE = 'DTSTART:%s RRULE:FREQ=MINUTELY;INTERVAL=1;COUNT=1'
+
+# % (date_start + timedelta(hours=1)).strftime(RRULE_FORMAT)
 
 # dialect+driver://username:password@host:port/database
 # postgresql+psycopg://tgbot:pass_123@localhost/tgbot_db

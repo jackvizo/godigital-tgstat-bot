@@ -410,16 +410,17 @@ async def collect_data(client, channels, hours):
 
 async def schedule_flow(service_name, date_start):
     new_start = datetime.now().replace(microsecond=0) if (datetime.now() - date_start) > timedelta(hours=1) else date_start
-    rrule_1 = new_start + timedelta(hours=1)
-    rrule_24 = new_start + timedelta(hours=24)
-    rrule_test = new_start + timedelta(minutes=1)
+    # rrule_1 = new_start + timedelta(hours=1)
+    # rrule_24 = new_start + timedelta(hours=24)
+    # rrule_test = (new_start + timedelta(hours=1)) # .strftime(config.RRULE_FORMAT) # config.RRULE_TEST_SCHEDULE %
 
     print('Планирование запуска сервиса "tg_collect":')
     try:
-        await run_deployment(name="tg-collect/1_hour", scheduled_time=rrule_test, timeout=0,
-                             parameters={'hours': 1})
+        # await run_deployment(name="tg-collect/1_hour", scheduled_time=rrule_1, timeout=0,
+        #                      parameters={'hours': 1})
         # await run_deployment(name="tg-collect/24_hour", scheduled_time=rrule_24, timeout=0,
         #                      parameters={'hours': 24})
+        service_run(service_name, date_start)
 
         print(f'\t- запланирован запуск {service_name} на +1 час и +24 часа с даты {new_start.strftime("%")}')
     except Exception as e:
