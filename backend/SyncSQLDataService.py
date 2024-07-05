@@ -37,8 +37,9 @@ class SyncSQLDataService(object):
 
         return user
 
-    def upsert_post(self, post: Stat_post) -> Stat_post:
+    def insert_post(self, post: Stat_post) -> Stat_post:
         values = (
+            post.timestamp,
             post.tg_post_id,
             post.tg_channel_id,
             post.message,
@@ -62,8 +63,9 @@ class SyncSQLDataService(object):
 
         return post
 
-    def upsert_react(self, react: Stat_reaction) -> Stat_reaction:
+    def insert_react(self, react: Stat_reaction) -> Stat_reaction:
         values = (
+            react.timestamp,
             react.tg_post_id,
             react.tg_channel_id,
             react.reaction_count,
@@ -103,54 +105,22 @@ class Constants:
         RETURNING pk
     '''
 
-    SQL_SELECT_REACTIONS_BY_ID = f'''
-        SELECT 
-            pk, 
-            tg_post_id, 
-            tg_channel_id, 
-            reaction_count, 
-            reaction_emoticon, 
-            reaction_emoticon_code 
-        FROM 
-            {TABLE_REACTIONS} 
-        WHERE 
-            tg_channel_id=%s 
-            AND tg_post_id=%s 
-            AND reaction_emoticon_code=%s
-    '''
-
     SQL_UPSERT_POST = f'''
         INSERT INTO {TABLE_POSTS} (
-            tg_post_id, tg_channel_id, message, views, views_1h, views_24h,
+            timestamp, tg_post_id, tg_channel_id, message, views, views_1h, views_24h,
             total_reactions_count, reactions_1h, reactions_24h, comments_users_count,
             comments_channels_count, comments_messages_count, comments_messages_count_1h,
             comments_messages_count_24h, link, media, forwards
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT (tg_post_id) DO UPDATE SET
-            tg_channel_id = EXCLUDED.tg_channel_id,
-            message = EXCLUDED.message,
-            views = EXCLUDED.views,
-            views_1h = EXCLUDED.views_1h,
-            views_24h = EXCLUDED.views_24h,
-            total_reactions_count = EXCLUDED.total_reactions_count,
-            reactions_1h = EXCLUDED.reactions_1h,
-            reactions_24h = EXCLUDED.reactions_24h,
-            comments_users_count = EXCLUDED.comments_users_count,
-            comments_channels_count = EXCLUDED.comments_channels_count,
-            comments_messages_count = EXCLUDED.comments_messages_count,
-            comments_messages_count_1h = EXCLUDED.comments_messages_count_1h,
-            comments_messages_count_24h = EXCLUDED.comments_messages_count_24h,
-            link = EXCLUDED.link,
-            media = EXCLUDED.media,
-            forwards = EXCLUDED.forwards
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING pk
     '''
 
     SQL_UPSERT_REACTION = f'''
         INSERT INTO {TABLE_REACTIONS} (
-            tg_post_id, tg_channel_id, reaction_count, reaction_emoticon, reaction_emoticon_code
-        ) VALUES (%s, %s, %s, %s, %s)
+            timestamp, tg_post_id, tg_channel_id, reaction_count, reaction_emoticon, reaction_emoticon_code
+        ) VALUES (%s, %s, %s, %s, %s, %s)
         ON CONFLICT (tg_post_id) DO UPDATE SET
+            timestamp = EXCLUDED.timestamp,
             tg_channel_id = EXCLUDED.tg_channel_id,
             reaction_count = EXCLUDED.reaction_count,
             reaction_emoticon = EXCLUDED.reaction_emoticon,
@@ -159,25 +129,25 @@ class Constants:
     '''
 
     SQL_GET_USERS_WITH_ACTIVE_PHONES = f'''
-    WITH enabled_sessions AS (
+        WITH enabled_sessions AS (
+            SELECT 
+                u.id AS user_id,
+                upn.phone_number,
+                ROW_NUMBER() OVER (PARTITION BY u.id ORDER BY upn.pk) AS rn
+            FROM 
+                user u
+            JOIN 
+                user_phone_number upn ON u.id = upn.user_id
+            JOIN 
+                config__tg_bot_session_pool ctbsp ON upn.phone_number = ctbsp.phone_number
+            WHERE 
+                ctbsp.status = 'enabled'
+        )
         SELECT 
-            u.id AS user_id,
-            upn.phone_number,
-            ROW_NUMBER() OVER (PARTITION BY u.id ORDER BY upn.pk) AS rn
+            user_id,
+            phone_number
         FROM 
-            user u
-        JOIN 
-            user_phone_number upn ON u.id = upn.user_id
-        JOIN 
-            config__tg_bot_session_pool ctbsp ON upn.phone_number = ctbsp.phone_number
+            enabled_sessions
         WHERE 
-            ctbsp.status = 'enabled'
-    )
-    SELECT 
-        user_id,
-        phone_number
-    FROM 
-        enabled_sessions
-    WHERE 
-        rn = 1;
+            rn = 1;
     '''

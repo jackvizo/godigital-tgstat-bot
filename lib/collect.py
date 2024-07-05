@@ -62,18 +62,19 @@ async def get_posts(tg_client: TelegramClient, channel_id: int, user_dict_link: 
 
             if tg_post.TABLE_REACTIONS:
                 for res in tg_post.TABLE_REACTIONS.results:
-                    react = Stat_reaction()
-                    react.reaction_count = res.count
+                    stat_reaction = Stat_reaction()
+                    stat_reaction.reaction_count = res.count
                     stat_post.total_reactions_count = (stat_post.total_reactions_count or 0) + res.count
                     try:
-                        react.reaction_emoticon = res.reaction.emoticon
-                        react.reaction_emoticon_code = ord(res.reaction.emoticon)
+                        stat_reaction.reaction_emoticon = res.reaction.emoticon
+                        stat_reaction.reaction_emoticon_code = ord(res.reaction.emoticon)
                     except Exception as e:
                         print(f'Ошибка извлечения реакции: {e}')
-                    react.tg_channel_id = channel_id
-                    react.tg_post_id = tg_post.id
+                    stat_reaction.tg_channel_id = channel_id
+                    stat_reaction.tg_post_id = tg_post.id
+                    stat_reaction.timestamp = datetime.now()
 
-                    react_list.append(react)
+                    react_list.append(stat_reaction)
 
             if tg_post.grouped_id:
                 pass
@@ -130,6 +131,7 @@ async def get_posts(tg_client: TelegramClient, channel_id: int, user_dict_link: 
 
             stat_post.tg_channel_id = channel_id
             stat_post.link = 'https://t.me/c/' + str(channel_id) + '/' + str(tg_post.id)
+            stat_post.timestamp = datetime.now()
             post_list.append(stat_post)
 
         print(
@@ -255,10 +257,10 @@ def store_channel(sql: SyncSQLDataService, user_dict, post_list, react_list):
             sql.upsert_user(user)
 
         for post in post_list:
-            sql.upsert_post(post)
+            sql.insert_post(post)
 
         for react in react_list:
-            sql.upsert_react(react)
+            sql.insert_react(react)
 
         sql.connection.commit()
     except Exception as e:
