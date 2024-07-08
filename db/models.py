@@ -1,10 +1,10 @@
-from sqlalchemy import create_engine, func, \
-    Column, BigInteger, DateTime, Integer, String, Boolean, Text, ForeignKey, JSON
+from sqlalchemy import func, \
+    Column, BigInteger, DateTime, Integer, String, Boolean, Text, ForeignKey
 from sqlalchemy.orm import declarative_base, relationship
 
-from globals import DB_CONNECTION_STR
+# from globals import DB_CONNECTION_STR
 
-engine = create_engine(DB_CONNECTION_STR)
+# engine = create_engine(DB_CONNECTION_STR)
 
 Base = declarative_base()
 
@@ -96,8 +96,6 @@ class Config__tg_bot_session_pool(Base):
     pk = Column(BigInteger, primary_key=True)
     created_at = Column(DateTime, server_default=func.now())
 
-    api_id = Column(String(255))
-    api_hash = Column(String(255))
     phone_number = Column(String(50))
     session_bytes = Column(Text)
 

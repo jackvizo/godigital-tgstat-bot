@@ -5,8 +5,10 @@ from telethon import types
 from telethon.sync import TelegramClient
 from telethon.tl.functions.messages import GetRepliesRequest
 
-from backend.SyncSQLDataService import SyncSQLDataService
-from models import Stat_post, Stat_reaction, Stat_user
+from db.SyncSQLDataService import SyncSQLDataService
+from db.models import Stat_post, Stat_reaction, Stat_user
+from db.queries import get_last_post_id_in_channel
+from lib.scheduler import schedule_tg_collect_flow_run
 
 
 def set_field_value(obj, value, field):
@@ -174,22 +176,6 @@ async def get_comments(tg_client: TelegramClient, channel_id: int, message_id: i
 
             if hasattr(comments, 'users'):
                 comments_users_count += len(comments.TABLE_USERS)
-                # for u in comments.users:
-                #     user = Stat_user()
-                #     user.tg_channel_id = channel_id
-                #     user.tg_user_id = u.id
-                #     user.username = u.username
-                #     user.first_name = u.first_name
-                #     user.last_name = u.last_name
-                #     user.phone = u.phone
-                #     user.premium = u.premium
-                #     user.scam = u.scam
-                #     user.verified = u.verified
-                #
-                #     if user.username in user_dict_link:
-                #         user_dict_link[user.tg_user_id].extend(user)
-                #     else:
-                #         user_dict_link.update({user.tg_user_id: user})
 
             if hasattr(comments, 'messages'):
                 comments_messages_count += len(comments.messages)
@@ -269,20 +255,10 @@ def store_channel(sql: SyncSQLDataService, user_dict, post_list, react_list):
     finally:
         sql.cursor.close()
 
-#
-# async def collect_flow():
-#     conf = dotenv_values('.env')
-#     phone_number = conf['PHONE']
-#
-#     clt = await authorize(phone_number)  # сессия из БД
-#     if not clt:
-#         clt = TelegramClient(phone_number, conf['API_ID'], conf['API_HASH'])  # новая сессия
-#     clt.parse_mode = 'html'
-#     # await clt.start()
-#
-#     for ch in get_db_channels():
-#         await collect_data(clt, (ch,), hours=0)
-#
-#
-# if __name__ == "__main__":
-#     asyncio.run(collect_flow())
+
+def schedule_flow_run(sql: SyncSQLDataService, post_list: list, channel_id: int, phone_number: str):
+    post_last_id = get_last_post_id_in_channel(sql.connection, channel_id)
+    shall_schedule_flow_run = len(post_list) > 0 and post_last_id != post_list[0].tg_post_id
+
+    if shall_schedule_flow_run:
+        schedule_tg_collect_flow_run(phone_number, channel_id)

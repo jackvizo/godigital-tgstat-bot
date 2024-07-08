@@ -1,6 +1,6 @@
-from db_utils import create_db_connection
+from db.connection import create_db_connection
 from globals import TABLE_POSTS, TABLE_REACTIONS, TABLE_USERS
-from models import Stat_post, Stat_reaction, Stat_user
+from db.models import Stat_post, Stat_reaction, Stat_user
 
 
 class SyncSQLDataService(object):

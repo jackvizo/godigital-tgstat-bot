@@ -1,18 +1,21 @@
-from prefect import flow
+import argparse
 
-from backend.SyncSQLDataService import SyncSQLDataService
-from tg_collect_flow import flow_collect_tg_channels_by_phone_number
-
-
-@flow
-def flow_supervisor():
-    sql = SyncSQLDataService()
-
-    users = sql.get_users_with_active_phone_numbers()
-
-    for user in users:
-        flow_collect_tg_channels_by_phone_number(user.phone_number)
-
+from flows.flow_add_bot_session import flow_add_bot_session
+from flows.flow_collect import flow_tg_collect_by_all_users
+from globals import validate_env_variables
 
 if __name__ == '__main__':
-    flow_supervisor.serve(name="tg-collect", interval=300)
+    validate_env_variables()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--flow", help="Specify the flow to run")
+    args = parser.parse_args()
+
+    switch_flow = args.flow
+
+    if switch_flow == 'add-bot-session':
+        flow_add_bot_session.serve(name="add-bot-session")
+    if switch_flow == 'tg-collect-by-all-users':
+        flow_tg_collect_by_all_users.serve(name="tg-collect-by-all-users")
+    else:
+        raise ValueError(f"Invalid flow: {switch_flow}. Available flows are ['add-phone-number', 'tg-collect-by-user']")
