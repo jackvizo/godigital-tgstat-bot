@@ -13,17 +13,15 @@ def get_session_from_db(conn, phone_number):
 def save_session_to_db(conn, phone_number, session_str, status, user_id, api_id, api_hash):
     cursor = conn.cursor()
     try:
-        # Начало транзакции
         cursor.execute("""
             INSERT INTO config__tg_bot_session_pool (phone_number, session_str, status, api_id, api_hash)
             VALUES (%s, %s, %s, %s, %s)
-        """, (phone_number, session_str, status))
+        """, (phone_number, session_str, status, api_id, api_hash))
 
         cursor.execute("""
             INSERT INTO user_phone_number (user_id, phone_number, status)
             VALUES (%s, %s, %s)
         """, (user_id, phone_number, status))
-        print('session_str', session_str)
         conn.commit()
     except Exception as e:
         conn.rollback()
