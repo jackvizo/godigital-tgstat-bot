@@ -10,13 +10,13 @@ def get_session_from_db(conn, phone_number):
     return result
 
 
-def save_session_to_db(conn, phone_number, session_str, status, user_id):
+def save_session_to_db(conn, phone_number, session_str, status, user_id, api_id, api_hash):
     cursor = conn.cursor()
     try:
         # Начало транзакции
         cursor.execute("""
-            INSERT INTO config__tg_bot_session_pool (phone_number, session_str, status)
-            VALUES (%s, %s, %s)
+            INSERT INTO config__tg_bot_session_pool (phone_number, session_str, status, api_id, api_hash)
+            VALUES (%s, %s, %s, %s, %s)
         """, (phone_number, session_str, status))
 
         cursor.execute("""

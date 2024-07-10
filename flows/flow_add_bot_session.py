@@ -62,6 +62,6 @@ async def flow_add_bot_session(api_id: str, api_hash: str, phone_number: str, us
     sql = SyncSQLDataService()
     sql.init()
 
-    store_bot_session(sql=sql, user_id=user_id, phone_number=phone_number, session_str=session_str)
+    store_bot_session(sql=sql, user_id=user_id, phone_number=phone_number, session_str=session_str, api_id=api_id, api_hash=api_hash)
 
     sql.close()
