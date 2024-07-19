@@ -59,21 +59,18 @@ async def get_posts(tg_client: TelegramClient, channel_id: int, user_dict_link: 
         if type(tg_post) == types.Message:
             stat_post_info.message = tg_post.message
             stat_post_info.tg_post_id = tg_post.id
-            stat_post.tg_post_id = tg_post.id
 
             if tg_post.forwards is not None:
-                stat_post.forwards = tg_post.forwards
+                stat_post_info.forwards = tg_post.forwards
 
             if tg_post.date is not None:
-                d = tg_post.date.replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S')
-                stat_post_info.date_of_post = d
-                stat_post.date_of_post = d
+                stat_post_info.date_of_post = tg_post.date.replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S')
 
             if tg_post.reactions is not None:
                 for res in tg_post.reactions.results:
                     stat_reaction = Stat_reaction()
                     stat_reaction.reaction_count = res.count
-                    stat_post.total_reactions_count = (stat_post.total_reactions_count or 0) + res.count
+                    stat_post_info.total_reactions_count = (stat_post_info.total_reactions_count or 0) + res.count
                     try:
                         stat_reaction.reaction_emoticon = res.reaction.emoticon
                         stat_reaction.reaction_emoticon_code = ord(res.reaction.emoticon)
@@ -93,18 +90,18 @@ async def get_posts(tg_client: TelegramClient, channel_id: int, user_dict_link: 
 
             if (type(tg_post.replies)) == types.MessageReplies:
                 if tg_post.replies.replies != 0:
-                    stat_post.comments_channels_count, stat_post.comments_users_count, \
-                    stat_post.comments_messages_count \
+                    stat_post_info.comments_channels_count, stat_post_info.comments_users_count, \
+                    stat_post_info.comments_messages_count \
                         = await get_comments(tg_client=tg_client, channel_id=channel_id,
-                                             message_id=stat_post.tg_post_id, user_dict_link=user_dict_link)
+                                             message_id=stat_post_info.tg_post_id, user_dict_link=user_dict_link)
 
-                    if stat_post.comments_messages_count > maximum_messages:
-                        maximum_messages = stat_post.comments_messages_count
-                        maximum_message_post = stat_post.tg_post_id
+                    if stat_post_info.comments_messages_count > maximum_messages:
+                        maximum_messages = stat_post_info.comments_messages_count
+                        maximum_message_post = stat_post_info.tg_post_id
 
-                    if stat_post.comments_users_count > maximum_users:
-                        maximum_users = stat_post.comments_messages_count
-                        maximum_users_post = stat_post.tg_post_id
+                    if stat_post_info.comments_users_count > maximum_users:
+                        maximum_users = stat_post_info.comments_messages_count
+                        maximum_users_post = stat_post_info.tg_post_id
 
             if tg_post.media is not None:
                 pass
@@ -116,37 +113,51 @@ async def get_posts(tg_client: TelegramClient, channel_id: int, user_dict_link: 
 
             if hasattr(tg_post, 'views'):
                 # Просмотры за всё время
-                set_field_value(stat_post, tg_post.views, field='views')
+                set_field_value(stat_post_info, tg_post.views, field='views')
 
                 # Вычисляем время жизни поста
                 post_age = current_time - tg_post.date.replace(tzinfo=None)
 
                 # Обновляем просмотры и реакции за 1 час, если время жизни поста не более 1 часа
                 # Оставляем 5 минутный запас на задержки запуска скрипта
-                if post_age <= timedelta(hours=1, minutes=5) or not stat_post.views_1h:
-                    set_field_value(stat_post, tg_post.views, field='views_1h')
-                    set_field_value(stat_post, 0 if tg_post.reactions is None else len(tg_post.reactions.results),
+                if post_age <= timedelta(hours=1, minutes=5) or not stat_post_info.views_1h:
+                    set_field_value(stat_post_info, tg_post.views, field='views_1h')
+                    set_field_value(stat_post_info, 0 if tg_post.reactions is None else len(tg_post.reactions.results),
                                     field='reactions_1h')
-                    set_field_value(stat_post, stat_post.comments_messages_count, field='comments_messages_count_1h')
+                    set_field_value(stat_post_info, stat_post_info.comments_messages_count, field='comments_messages_count_1h')
 
                 # Обновляем просмотры и реакции за 24 часа, если время жизни поста не более 24 часов
                 # Оставляем 5 минутный запас на задержкиу запуска скрипта
-                if post_age <= timedelta(hours=24, minutes=5) or not stat_post.view_24h:
-                    set_field_value(stat_post, tg_post.views, field='view_24h')
-                    set_field_value(stat_post, 0 if tg_post.reactions is None else len(tg_post.reactions.results),
+                if post_age <= timedelta(hours=24, minutes=5) or not stat_post_info.view_24h:
+                    set_field_value(stat_post_info, tg_post.views, field='view_24h')
+                    set_field_value(stat_post_info, 0 if tg_post.reactions is None else len(tg_post.reactions.results),
                                     field='reaction_24h')
-                    set_field_value(stat_post, stat_post.comments_messages_count, field='comments_messages_count_24h')
+                    set_field_value(stat_post_info, stat_post_info.comments_messages_count, field='comments_messages_count_24h')
 
             else:
                 print(f'Объект "{type(tg_post)}" (id={tg_post.id}, chat: {tg_post.chat_id}, '
                       f'user: {tg_post.from_id.user_id}) не имеет свойства "views"')
 
-            stat_post.tg_channel_id = channel_id
             stat_post_info.tg_channel_id = channel_id
             stat_post_info.link = 'https://t.me/c/' + str(channel_id) + '/' + str(tg_post.id)
-
-            stat_post.timestamp = current_time
             stat_post_info.timestamp = current_time
+
+            stat_post.timestamp = stat_post_info.timestamp
+            stat_post.date_of_post = stat_post_info.date_of_post
+            stat_post.tg_post_id = stat_post_info.tg_post_id
+            stat_post.tg_channel_id = stat_post_info.tg_channel_id
+            stat_post.views = stat_post_info.views
+            stat_post.views_1h = stat_post_info.views_1h
+            stat_post.view_24h = stat_post_info.view_24h
+            stat_post.total_reactions_count = stat_post_info.total_reactions_count
+            stat_post.reactions_1h = stat_post_info.reactions_1h
+            stat_post.reaction_24h = stat_post_info.reaction_24h
+            stat_post.comments_users_count = stat_post_info.comments_users_count
+            stat_post.comments_channels_count = stat_post_info.comments_channels_count
+            stat_post.comments_messages_count = stat_post_info.comments_messages_count
+            stat_post.comments_messages_count_1h = stat_post_info.comments_messages_count_1h
+            stat_post.comments_messages_count_24h = stat_post_info.comments_messages_count_24h
+            stat_post.forwards = stat_post_info.forwards
 
             post_list.append(stat_post)
             post_info_list.append(stat_post_info)

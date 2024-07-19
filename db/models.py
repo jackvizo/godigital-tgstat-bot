@@ -75,6 +75,22 @@ class Stat_post_info(Base):
     link = Column(Text)
     media = Column(Text)
 
+    views = Column(Integer)
+    views_1h = Column(Integer)
+    view_24h = Column(Integer)
+
+    total_reactions_count = Column(Integer)
+    reactions_1h = Column(Integer)
+    reaction_24h = Column(Integer)
+
+    comments_users_count = Column(Integer)
+    comments_channels_count = Column(Integer)
+
+    comments_messages_count = Column(Integer)
+    comments_messages_count_1h = Column(Integer)
+    comments_messages_count_24h = Column(Integer)
+
+    forwards = Column(Integer)
 
 class Stat_reaction(Base):
     __tablename__ = 'stat_reaction'

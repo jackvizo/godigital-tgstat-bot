@@ -70,7 +70,20 @@ class SyncSQLDataService(object):
             post.tg_channel_id,
             post.message,
             post.link,
-            post.media
+            post.media,
+
+            post.views,
+            post.views_1h,
+            post.view_24h,
+            post.total_reactions_count,
+            post.reactions_1h,
+            post.reaction_24h,
+            post.comments_users_count,
+            post.comments_channels_count,
+            post.comments_messages_count,
+            post.comments_messages_count_1h,
+            post.comments_messages_count_24h,
+            post.forwards
         )
         self.cursor.execute(Constants.SQL_UPSERT_POST_INFO, values)
         post.pk = self.cursor.fetchone()[0]
@@ -132,8 +145,12 @@ class Constants:
 
     SQL_UPSERT_POST_INFO = f'''
         INSERT INTO {TABLE_POSTS_INFO} (
-            timestamp, date_of_post, tg_post_id, tg_channel_id, message, link, media
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+            timestamp, date_of_post, tg_post_id, tg_channel_id, message, link, media, 
+            views, views_1h, view_24h,
+            total_reactions_count, reactions_1h, reaction_24h, comments_users_count,
+            comments_channels_count, comments_messages_count, comments_messages_count_1h,
+            comments_messages_count_24h, forwards            
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (tg_post_id, tg_channel_id) DO UPDATE SET
             timestamp = EXCLUDED.timestamp,
             date_of_post = EXCLUDED.date_of_post,
@@ -141,7 +158,20 @@ class Constants:
             tg_channel_id = EXCLUDED.tg_channel_id,
             message = EXCLUDED.message,
             link = EXCLUDED.link,
-            media = EXCLUDED.media
+            media = EXCLUDED.media,
+            
+            views = EXCLUDED.views,
+            views_1h = EXCLUDED.views_1h,
+            view_24h = EXCLUDED.view_24h,
+            total_reactions_count = EXCLUDED.total_reactions_count,
+            reactions_1h = EXCLUDED.reactions_1h,
+            reaction_24h = EXCLUDED.reaction_24h,
+            comments_users_count = EXCLUDED.comments_users_count,
+            comments_channels_count = EXCLUDED.comments_channels_count,
+            comments_messages_count = EXCLUDED.comments_messages_count,
+            comments_messages_count_1h = EXCLUDED.comments_messages_count_1h,
+            comments_messages_count_24h = EXCLUDED.comments_messages_count_24h,
+            forwards = EXCLUDED.forwards
         RETURNING pk
     '''
 
