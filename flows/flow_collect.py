@@ -1,5 +1,5 @@
+from datetime import datetime, timedelta
 from prefect import flow
-
 from db.SyncSQLDataService import SyncSQLDataService
 from db.queries import get_tracked_tg_channels, get_last_post_id_in_channel
 from lib.collect import collect_channel, store_channel
@@ -8,8 +8,17 @@ from lib.tg_client import get_authorized_tg_client
 
 
 async def schedule_flow_run(sql: SyncSQLDataService, post_list: list, channel_id: int, phone_number: str):
-    post_last_id = get_last_post_id_in_channel(sql.connection, channel_id)
-    shall_schedule_flow_run = len(post_list) > 0 and post_last_id != post_list[0].tg_post_id
+    record = get_last_post_id_in_channel(sql.connection, channel_id)
+
+    if record is None:
+        return
+
+    post_last_id, date_of_post = record
+
+    current_time = datetime.utcnow()
+    is_recent_post = (current_time - date_of_post) < timedelta(hours=24, minutes=5)
+
+    shall_schedule_flow_run = len(post_list) > 0 and post_last_id != post_list[0].tg_post_id and is_recent_post
 
     if shall_schedule_flow_run:
         schedule_tg_collect_flow_run(phone_number, channel_id)
@@ -37,8 +46,8 @@ async def subflow_collect_tg_channels_by_phone_number(phone_number: str, channel
             print(
                 f'collected posts: {len(post_list)}; collected reacts: {len(react_list)}; collected users: {len(user_dict)}')
 
-            store_channel(sql, user_dict, post_list, react_list)
             await schedule_flow_run(sql, post_list, channel_id, phone_number)
+            store_channel(sql, user_dict, post_list, react_list)
 
         await tg_client.disconnect()
 
@@ -48,8 +57,15 @@ async def subflow_collect_tg_channels_by_phone_number(phone_number: str, channel
 
 
 @flow(log_prints=True)
-def flow_tg_collect_by_all_users():
+def flow_tg_collect_by_all_users(scheduled_phone_number: str = None, scheduled_tg_channel_id: int = None):
+    if scheduled_phone_number and scheduled_tg_channel_id:
+        print('flow_tg_collect_by_all_users called by schedule')
+
+        subflow_collect_tg_channels_by_phone_number(phone_number=scheduled_phone_number, channel_id=scheduled_tg_channel_id)
+        return
+
     print('flow_tg_collect_by_all_users call')
+
     sql = SyncSQLDataService()
     sql.init()
 

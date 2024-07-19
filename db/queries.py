@@ -46,11 +46,12 @@ def get_tracked_tg_channels(conn, session_pool_pk):
 def get_last_post_id_in_channel(conn, channel_id):
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT tg_post_id
+        SELECT tg_post_id, date_of_post
         FROM stat_post
         WHERE tg_channel_id = %s
         ORDER BY tg_post_id DESC
+        LIMIT 1
     """, (channel_id,))
     post = cursor.fetchone()
     cursor.close()
-    return post[0] if post else post
+    return post
