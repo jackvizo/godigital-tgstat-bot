@@ -38,6 +38,7 @@ TEST_TG_SERVER_PORT = os.getenv("TEST_TG_SERVER_PORT")
 TABLE_POSTS = 'stat_post'
 TABLE_REACTIONS = 'stat_reaction'
 TABLE_USERS = 'stat_user'
+TABLE_TG_SESSION_POOL = 'config__tg_bot_session_pool'
 
 dialect = "postgresql"
 driver = "psycopg"

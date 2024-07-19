@@ -1,7 +1,7 @@
 def get_session_from_db(conn, phone_number):
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT pk, api_id, api_hash, session_bytes
+        SELECT pk, api_id, api_hash, session_str
         FROM config__tg_bot_session_pool
         WHERE phone_number = %s AND status = 'enabled'
     """, (phone_number,))
@@ -12,22 +12,12 @@ def get_session_from_db(conn, phone_number):
 
 def save_session_to_db(conn, phone_number, session_str, status, user_id, api_id, api_hash):
     cursor = conn.cursor()
-    try:
-        cursor.execute("""
-            INSERT INTO config__tg_bot_session_pool (phone_number, session_str, status, api_id, api_hash)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (phone_number, session_str, status, api_id, api_hash))
-
-        cursor.execute("""
-            INSERT INTO user_phone_number (user_id, phone_number, status)
-            VALUES (%s, %s, %s)
-        """, (user_id, phone_number, status))
-        conn.commit()
-    except Exception as e:
-        conn.rollback()
-        raise e
-    finally:
-        cursor.close()
+    cursor.execute("""
+        INSERT INTO config__tg_bot_session_pool (phone_number, session_str, status, api_id, api_hash, user_id)
+            VALUES (%s, %s, %s, %s, %s, %s)
+    """, (phone_number, session_str, status, api_id, api_hash, user_id,))
+    conn.commit()
+    cursor.close()
 
 
 def save_channel_to_db(conn, tg_channel_id, tg_channel_name):
@@ -40,13 +30,13 @@ def save_channel_to_db(conn, tg_channel_id, tg_channel_name):
     cursor.close()
 
 
-def get_db_channels(conn, session_pool_pk):
+def get_tracked_tg_channels(conn, session_pool_pk):
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT c.tg_channel_id, c.tg_channel_name
-        FROM config__tg_channel c
-        JOIN config__tg_bot_session_pool sp ON c.pk = sp.config__tg_channel_pk
-        WHERE sp.pk = %s
+        SELECT c.tg_channel_id
+        FROM user_tg_channel c
+        JOIN tg_channel__session s ON c.pk = s.user_tg_channel_pk
+        WHERE s.config__tg_bot_session_pool_pk = %s;
     """, (session_pool_pk,))
     channels = cursor.fetchall()
     cursor.close()

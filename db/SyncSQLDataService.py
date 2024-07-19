@@ -1,5 +1,5 @@
 from db.connection import create_db_connection
-from globals import TABLE_POSTS, TABLE_REACTIONS, TABLE_USERS
+from globals import TABLE_POSTS, TABLE_REACTIONS, TABLE_USERS, TABLE_TG_SESSION_POOL
 from db.models import Stat_post, Stat_reaction, Stat_user
 
 
@@ -31,6 +31,7 @@ class SyncSQLDataService(object):
             user.premium,
             user.verified,
             user.is_joined_by_link,
+            user.invite_link
         )
         self.cursor.execute(Constants.SQL_UPSERT_USER_TG, values)
         user.pk = self.cursor.fetchone()[0]
@@ -40,15 +41,16 @@ class SyncSQLDataService(object):
     def insert_post(self, post: Stat_post) -> Stat_post:
         values = (
             post.timestamp,
+            post.date_of_post,
             post.tg_post_id,
             post.tg_channel_id,
             post.message,
             post.views,
             post.views_1h,
-            post.views_24h,
+            post.view_24h,
             post.total_reactions_count,
             post.reactions_1h,
-            post.reactions_24h,
+            post.reaction_24h,
             post.comments_users_count,
             post.comments_channels_count,
             post.comments_messages_count,
@@ -58,12 +60,12 @@ class SyncSQLDataService(object):
             post.media,
             post.forwards,
         )
-        self.cursor.execute(Constants.SQL_UPSERT_POST, values)
+        self.cursor.execute(Constants.SQL_INSERT_POST, values)
         post.pk = self.cursor.fetchone()[0]
 
         return post
 
-    def insert_react(self, react: Stat_reaction) -> Stat_reaction:
+    def upsert_reaction(self, react: Stat_reaction) -> Stat_reaction:
         values = (
             react.timestamp,
             react.tg_post_id,
@@ -89,8 +91,8 @@ class Constants:
     SQL_UPSERT_USER_TG = f'''
         INSERT INTO {TABLE_USERS} (
             joined_at, left_at, tg_user_id, tg_channel_id, first_name,
-            last_name, username, phone, scam, premium, verified, is_joined_by_link
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            last_name, username, phone, scam, premium, verified, is_joined_by_link, invite_link
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (tg_user_id, tg_channel_id) DO UPDATE SET
             joined_at = EXCLUDED.joined_at,
             left_at = EXCLUDED.left_at,
@@ -101,17 +103,18 @@ class Constants:
             scam = EXCLUDED.scam,
             premium = EXCLUDED.premium,
             verified = EXCLUDED.verified,
-            is_joined_by_link = EXCLUDED.is_joined_by_link
+            is_joined_by_link = EXCLUDED.is_joined_by_link,
+            invite_link = EXCLUDED.invite_link
         RETURNING pk
     '''
 
-    SQL_UPSERT_POST = f'''
+    SQL_INSERT_POST = f'''
         INSERT INTO {TABLE_POSTS} (
-            timestamp, tg_post_id, tg_channel_id, message, views, views_1h, views_24h,
-            total_reactions_count, reactions_1h, reactions_24h, comments_users_count,
+            timestamp, date_of_post, tg_post_id, tg_channel_id, message, views, views_1h, view_24h,
+            total_reactions_count, reactions_1h, reaction_24h, comments_users_count,
             comments_channels_count, comments_messages_count, comments_messages_count_1h,
             comments_messages_count_24h, link, media, forwards
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING pk
     '''
 
@@ -119,7 +122,7 @@ class Constants:
         INSERT INTO {TABLE_REACTIONS} (
             timestamp, tg_post_id, tg_channel_id, reaction_count, reaction_emoticon, reaction_emoticon_code
         ) VALUES (%s, %s, %s, %s, %s, %s)
-        ON CONFLICT (tg_post_id) DO UPDATE SET
+        ON CONFLICT (tg_post_id, tg_channel_id, reaction_emoticon_code) DO UPDATE SET
             timestamp = EXCLUDED.timestamp,
             tg_channel_id = EXCLUDED.tg_channel_id,
             reaction_count = EXCLUDED.reaction_count,
@@ -129,25 +132,17 @@ class Constants:
     '''
 
     SQL_GET_USERS_WITH_ACTIVE_PHONES = f'''
-        WITH enabled_sessions AS (
-            SELECT 
-                u.id AS user_id,
-                upn.phone_number,
-                ROW_NUMBER() OVER (PARTITION BY u.id ORDER BY upn.pk) AS rn
-            FROM 
-                user u
-            JOIN 
-                user_phone_number upn ON u.id = upn.user_id
-            JOIN 
-                config__tg_bot_session_pool ctbsp ON upn.phone_number = ctbsp.phone_number
-            WHERE 
-                ctbsp.status = 'enabled'
-        )
         SELECT 
             user_id,
             phone_number
         FROM 
-            enabled_sessions
+            {TABLE_TG_SESSION_POOL} ctbsp
         WHERE 
-            rn = 1;
+            status = 'enabled'
+            AND pk = (
+                SELECT MIN(pk)
+                FROM {TABLE_TG_SESSION_POOL} sub_ctbsp
+                WHERE sub_ctbsp.user_id = ctbsp.user_id
+                  AND sub_ctbsp.status = 'enabled'
+            );
     '''

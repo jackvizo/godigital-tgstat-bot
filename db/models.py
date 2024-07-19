@@ -38,7 +38,7 @@ class Stat_post(Base):
 
     pk = Column(BigInteger, primary_key=True)
     timestamp = Column(DateTime, server_default=func.now())
-    date_of_post = Column(String(25))  # forgot in the schema.prism
+    date_of_post = Column(DateTime)
 
     tg_post_id = Column(BigInteger)
     tg_channel_id = Column(BigInteger)
@@ -46,11 +46,11 @@ class Stat_post(Base):
     message = Column(Text)
     views = Column(Integer)
     views_1h = Column(Integer)
-    views_24h = Column(Integer)
+    view_24h = Column(Integer)
 
     total_reactions_count = Column(Integer)
     reactions_1h = Column(Integer)
-    reactions_24h = Column(Integer)
+    reaction_24h = Column(Integer)
 
     comments_users_count = Column(Integer)
     comments_channels_count = Column(Integer)
