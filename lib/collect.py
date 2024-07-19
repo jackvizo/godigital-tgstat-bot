@@ -7,7 +7,7 @@ from telethon.tl.functions.messages import GetRepliesRequest
 from telethon.tl.types import PeerChannel
 
 from db.SyncSQLDataService import SyncSQLDataService
-from db.models import Stat_post, Stat_reaction, Stat_user
+from db.models import Stat_post, Stat_reaction, Stat_user, Stat_post_info
 from db.queries import get_last_post_id_in_channel
 from lib.scheduler import schedule_tg_collect_flow_run
 
@@ -33,6 +33,7 @@ async def get_posts(tg_client: TelegramClient, channel_id: int, user_dict_link: 
     start = time()
 
     post_list = []
+    post_info_list = []
     react_list = []
 
     offset_id = 1
@@ -48,6 +49,7 @@ async def get_posts(tg_client: TelegramClient, channel_id: int, user_dict_link: 
 
     async for tg_post in tg_posts:
         stat_post = Stat_post()
+        stat_post_info = Stat_post_info()
 
         if posts_counter == 0:
             print(
@@ -55,14 +57,17 @@ async def get_posts(tg_client: TelegramClient, channel_id: int, user_dict_link: 
                 f'in chat: "{str(tg_post.chat.title)[:25]}"')
 
         if type(tg_post) == types.Message:
-            stat_post.message = tg_post.message
+            stat_post_info.message = tg_post.message
+            stat_post_info.tg_post_id = tg_post.id
             stat_post.tg_post_id = tg_post.id
 
             if tg_post.forwards is not None:
                 stat_post.forwards = tg_post.forwards
 
             if tg_post.date is not None:
-                stat_post.date_of_post = tg_post.date.replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S')
+                d = tg_post.date.replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S')
+                stat_post_info.date_of_post = d
+                stat_post.date_of_post = d
 
             if tg_post.reactions is not None:
                 for res in tg_post.reactions.results:
@@ -104,10 +109,10 @@ async def get_posts(tg_client: TelegramClient, channel_id: int, user_dict_link: 
             if tg_post.media is not None:
                 pass
                 if (type(tg_post.media)) == types.MessageMediaDocument:
-                    stat_post.media = tg_post.media.document.mime_type
+                    stat_post_info.media = tg_post.media.document.mime_type
 
                 elif (type(tg_post.media)) == types.MessageMediaPhoto:
-                    stat_post.media = 'PHOTO'
+                    stat_post_info.media = 'PHOTO'
 
             if hasattr(tg_post, 'views'):
                 # Просмотры за всё время
@@ -120,14 +125,16 @@ async def get_posts(tg_client: TelegramClient, channel_id: int, user_dict_link: 
                 # Оставляем 5 минутный запас на задержки запуска скрипта
                 if post_age <= timedelta(hours=1, minutes=5) or not stat_post.views_1h:
                     set_field_value(stat_post, tg_post.views, field='views_1h')
-                    set_field_value(stat_post, 0 if tg_post.reactions is None else len(tg_post.reactions.results), field='reactions_1h')
+                    set_field_value(stat_post, 0 if tg_post.reactions is None else len(tg_post.reactions.results),
+                                    field='reactions_1h')
                     set_field_value(stat_post, stat_post.comments_messages_count, field='comments_messages_count_1h')
 
                 # Обновляем просмотры и реакции за 24 часа, если время жизни поста не более 24 часов
                 # Оставляем 5 минутный запас на задержкиу запуска скрипта
                 if post_age <= timedelta(hours=24, minutes=5) or not stat_post.view_24h:
                     set_field_value(stat_post, tg_post.views, field='view_24h')
-                    set_field_value(stat_post, 0 if tg_post.reactions is None else len(tg_post.reactions.results), field='reaction_24h')
+                    set_field_value(stat_post, 0 if tg_post.reactions is None else len(tg_post.reactions.results),
+                                    field='reaction_24h')
                     set_field_value(stat_post, stat_post.comments_messages_count, field='comments_messages_count_24h')
 
             else:
@@ -135,9 +142,14 @@ async def get_posts(tg_client: TelegramClient, channel_id: int, user_dict_link: 
                       f'user: {tg_post.from_id.user_id}) не имеет свойства "views"')
 
             stat_post.tg_channel_id = channel_id
-            stat_post.link = 'https://t.me/c/' + str(channel_id) + '/' + str(tg_post.id)
-            stat_post.timestamp = datetime.utcnow()
+            stat_post_info.tg_channel_id = channel_id
+            stat_post_info.link = 'https://t.me/c/' + str(channel_id) + '/' + str(tg_post.id)
+
+            stat_post.timestamp = current_time
+            stat_post_info.timestamp = current_time
+
             post_list.append(stat_post)
+            post_info_list.append(stat_post_info)
 
         posts_counter += 1
         if posts_counter >= max_posts:
@@ -147,7 +159,7 @@ async def get_posts(tg_client: TelegramClient, channel_id: int, user_dict_link: 
             return post_list, react_list
 
     print(f'total time: {int(time() - start)}sec')
-    return post_list, react_list
+    return post_list, react_list, post_info_list
 
 
 async def get_comments(tg_client: TelegramClient, channel_id: int, message_id: int, user_dict_link: dict, limit=400):
@@ -238,21 +250,25 @@ async def collect_channel(tg_client, channel_id):
     async with tg_client:
         user_dict = {}
 
-        post_list, react_list = await get_posts(tg_client=tg_client, channel_id=channel_id,
-                                                current_time=current_time, user_dict_link=user_dict, max_posts=10)
+        post_list, react_list, post_info_list = await get_posts(tg_client=tg_client, channel_id=channel_id,
+                                                                current_time=current_time, user_dict_link=user_dict,
+                                                                max_posts=10)
 
         await get_user_actions(tg_client=tg_client, channel_id=channel_id, user_dict_link=user_dict)
 
-        return user_dict, post_list, react_list
+        return user_dict, post_list, react_list, post_info_list
 
 
-def store_channel(sql: SyncSQLDataService, user_dict, post_list, react_list):
+def store_channel(sql: SyncSQLDataService, user_dict, post_list, react_list, post_info_list):
     try:
         for user in user_dict.values():
             sql.upsert_user(user)
 
         for post in post_list:
             sql.insert_post(post)
+
+        for post_info in post_info_list:
+            sql.upsert_post_info(post_info)
 
         for react in react_list:
             sql.upsert_reaction(react)

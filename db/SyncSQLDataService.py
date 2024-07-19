@@ -1,6 +1,6 @@
 from db.connection import create_db_connection
-from globals import TABLE_POSTS, TABLE_REACTIONS, TABLE_USERS, TABLE_TG_SESSION_POOL
-from db.models import Stat_post, Stat_reaction, Stat_user
+from globals import TABLE_POSTS, TABLE_REACTIONS, TABLE_USERS, TABLE_TG_SESSION_POOL, TABLE_POSTS_INFO
+from db.models import Stat_post, Stat_reaction, Stat_user, Stat_post_info
 
 
 class SyncSQLDataService(object):
@@ -44,7 +44,6 @@ class SyncSQLDataService(object):
             post.date_of_post,
             post.tg_post_id,
             post.tg_channel_id,
-            post.message,
             post.views,
             post.views_1h,
             post.view_24h,
@@ -56,11 +55,24 @@ class SyncSQLDataService(object):
             post.comments_messages_count,
             post.comments_messages_count_1h,
             post.comments_messages_count_24h,
-            post.link,
-            post.media,
             post.forwards,
         )
         self.cursor.execute(Constants.SQL_INSERT_POST, values)
+        post.pk = self.cursor.fetchone()[0]
+
+        return post
+
+    def upsert_post_info(self, post: Stat_post_info) -> Stat_post:
+        values = (
+            post.timestamp,
+            post.date_of_post,
+            post.tg_post_id,
+            post.tg_channel_id,
+            post.message,
+            post.link,
+            post.media
+        )
+        self.cursor.execute(Constants.SQL_UPSERT_POST_INFO, values)
         post.pk = self.cursor.fetchone()[0]
 
         return post
@@ -110,11 +122,26 @@ class Constants:
 
     SQL_INSERT_POST = f'''
         INSERT INTO {TABLE_POSTS} (
-            timestamp, date_of_post, tg_post_id, tg_channel_id, message, views, views_1h, view_24h,
+            timestamp, date_of_post, tg_post_id, tg_channel_id, views, views_1h, view_24h,
             total_reactions_count, reactions_1h, reaction_24h, comments_users_count,
             comments_channels_count, comments_messages_count, comments_messages_count_1h,
-            comments_messages_count_24h, link, media, forwards
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            comments_messages_count_24h, forwards
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING pk
+    '''
+
+    SQL_UPSERT_POST_INFO = f'''
+        INSERT INTO {TABLE_POSTS_INFO} (
+            timestamp, date_of_post, tg_post_id, tg_channel_id, message, link, media
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (tg_post_id, tg_channel_id) DO UPDATE SET
+            timestamp = EXCLUDED.timestamp,
+            date_of_post = EXCLUDED.date_of_post,
+            tg_post_id = EXCLUDED.tg_post_id,
+            tg_channel_id = EXCLUDED.tg_channel_id,
+            message = EXCLUDED.message,
+            link = EXCLUDED.link,
+            media = EXCLUDED.media
         RETURNING pk
     '''
 

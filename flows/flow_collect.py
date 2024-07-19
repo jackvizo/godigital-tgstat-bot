@@ -41,13 +41,13 @@ async def subflow_collect_tg_channels_by_phone_number(phone_number: str, channel
 
             print(f'Start collecting stats from channel {channel_id}...')
 
-            user_dict, post_list, react_list = await collect_channel(tg_client, channel_id)
+            user_dict, post_list, react_list, post_info_list = await collect_channel(tg_client, channel_id)
 
             print(
                 f'collected posts: {len(post_list)}; collected reacts: {len(react_list)}; collected users: {len(user_dict)}')
 
             await schedule_flow_run(sql, post_list, channel_id, phone_number)
-            store_channel(sql, user_dict, post_list, react_list)
+            store_channel(sql, user_dict, post_list, react_list, post_info_list)
 
         await tg_client.disconnect()
 

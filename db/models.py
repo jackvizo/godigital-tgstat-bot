@@ -43,7 +43,6 @@ class Stat_post(Base):
     tg_post_id = Column(BigInteger)
     tg_channel_id = Column(BigInteger)
 
-    message = Column(Text)
     views = Column(Integer)
     views_1h = Column(Integer)
     view_24h = Column(Integer)
@@ -59,9 +58,22 @@ class Stat_post(Base):
     comments_messages_count_1h = Column(Integer)
     comments_messages_count_24h = Column(Integer)
 
+    forwards = Column(Integer)
+
+
+class Stat_post_info(Base):
+    __tablename__ = 'stat_post_info'
+
+    pk = Column(BigInteger, primary_key=True)
+    timestamp = Column(DateTime, server_default=func.now())
+    date_of_post = Column(DateTime)
+
+    tg_post_id = Column(BigInteger)
+    tg_channel_id = Column(BigInteger)
+
+    message = Column(Text)
     link = Column(Text)
     media = Column(Text)
-    forwards = Column(Integer)
 
 
 class Stat_reaction(Base):
