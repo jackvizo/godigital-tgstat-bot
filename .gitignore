@@ -159,3 +159,4 @@ tmp
 id_rsa_immerse
 sandbox.py
 clouds.yaml
+*.env
