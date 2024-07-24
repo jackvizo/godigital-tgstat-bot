@@ -200,7 +200,7 @@ async def get_comments(tg_client: TelegramClient, channel_id: int, message_id: i
                 for u in comments.users:
                     user = user_dict_link[u.id] if u.id in user_dict_link else Stat_user()
 
-                    user.tg_channel_id = id
+                    user.tg_channel_id = channel_id
                     user.tg_user_id = u.id
                     user.username = u.username
                     user.first_name = u.first_name
