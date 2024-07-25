@@ -167,9 +167,8 @@ async def get_posts(tg_client: TelegramClient, channel_id: int, user_dict_link: 
             print(f'finish read {posts_counter} messages, TOTAL time: {int(time() - start)} sec, '
                   f'[max messages: {maximum_messages} in tg_post_id: {maximum_message_post}], '
                   f'[max users: {maximum_users} in {maximum_users_post}]')
-            return post_list, react_list
+            return post_list, react_list, post_info_list
 
-    print(f'total time: {int(time() - start)}sec')
     return post_list, react_list, post_info_list
 
 
@@ -271,10 +270,10 @@ async def collect_channel(tg_client, channel_id):
 
 
 def store_channel(sql: SyncSQLDataService, user_dict, post_list, react_list, post_info_list):
+    sql.open()
     try:
         for user in user_dict.values():
             sql.upsert_user(user)
-
         for post in post_list:
             sql.insert_post(post)
 

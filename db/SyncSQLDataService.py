@@ -12,6 +12,9 @@ class SyncSQLDataService(object):
 
     def init(self):
         self.connection = create_db_connection()
+        self.open()
+
+    def open(self):
         self.cursor = self.connection.cursor()
 
     def close(self):
