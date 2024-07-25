@@ -114,6 +114,10 @@ class SyncSQLDataService(object):
 
         return result
 
+    def set_phone_number_banned(self, phone_number: str):
+        self.cursor.execute(Constants.SQL_SET_PHONE_BANNED, (phone_number))
+        self.cursor.close()
+
 
 class Constants:
     SQL_UPSERT_USER_TG = f'''
@@ -205,4 +209,10 @@ class Constants:
                 WHERE sub_ctbsp.user_id = ctbsp.user_id
                   AND sub_ctbsp.status = 'enabled'
             );
+    '''
+
+    SQL_SET_PHONE_BANNED = f'''
+        UPDATE tg_bot_session_pool
+        SET status = 'banned'
+        WHERE phone_number = %s;
     '''

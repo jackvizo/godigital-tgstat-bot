@@ -15,6 +15,7 @@ async def get_authorized_tg_client(sql: SyncSQLDataService, phone_number):
                                    flood_sleep_threshold=30)
         await tg_client.connect()
         if not await tg_client.is_user_authorized():
+            sql.set_phone_number_banned(phone_number=phone_number)
             raise PermissionError('NOT_AUTHORIZED')
     else:
         raise PermissionError("NO_ACTIVE_SESSION_IN_POOL")
