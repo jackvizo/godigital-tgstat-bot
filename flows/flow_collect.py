@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
+
 from prefect import flow
+
 from db.SyncSQLDataService import SyncSQLDataService
 from db.queries import get_tracked_tg_channels, get_last_post_id_in_channel
 from lib.collect import collect_channel, store_channel
@@ -37,18 +39,27 @@ async def subflow_collect_tg_channels_by_phone_number(phone_number: str, channel
         channels = [[channel_id]] if channel_id else get_tracked_tg_channels(sql.connection, session_pool_pk)
 
         for channel in channels:
+            sql.open()
             channel_id = channel[0]
 
             print(f'Start collecting stats from channel {channel_id}...')
 
-            user_dict, post_list, react_list, post_info_list = await collect_channel(tg_client, channel_id)
+            tg_last_admin_event_id = sql.get_tg_last_event_id(channel_id)
+
+            user_dict, post_list, react_list, post_info_list, stat_channel = await collect_channel(
+                tg_client=tg_client,
+                channel_id=channel_id,
+                tg_last_admin_event_id=tg_last_admin_event_id)
 
             print(
                 f'collected posts: {len(post_list)}; collected reacts: {len(react_list)}; collected users: {len(user_dict)}')
 
             await schedule_flow_run(sql, post_list, channel_id, phone_number)
-            store_channel(sql, user_dict, post_list, react_list, post_info_list)
 
+            store_channel(sql=sql, user_dict=user_dict, post_list=post_list,
+                          react_list=react_list,
+                          post_info_list=post_info_list, stat_channel=stat_channel)
+            sql.cursor.close()
         await tg_client.disconnect()
 
     finally:
@@ -61,7 +72,8 @@ def flow_tg_collect_by_all_users(scheduled_phone_number: str = None, scheduled_t
     if scheduled_phone_number and scheduled_tg_channel_id:
         print('flow_tg_collect_by_all_users called by schedule')
 
-        subflow_collect_tg_channels_by_phone_number(phone_number=scheduled_phone_number, channel_id=scheduled_tg_channel_id)
+        subflow_collect_tg_channels_by_phone_number(phone_number=scheduled_phone_number,
+                                                    channel_id=scheduled_tg_channel_id)
         return
 
     print('flow_tg_collect_by_all_users call')
@@ -76,4 +88,3 @@ def flow_tg_collect_by_all_users(scheduled_phone_number: str = None, scheduled_t
     for user in users:
         user_id, phone_number = user
         subflow_collect_tg_channels_by_phone_number(phone_number)
-

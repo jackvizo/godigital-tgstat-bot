@@ -38,6 +38,7 @@ TEST_TG_SERVER_PORT = os.getenv("TEST_TG_SERVER_PORT")
 TABLE_POSTS = 'stat_post'
 TABLE_POSTS_INFO = 'stat_post_info'
 TABLE_REACTIONS = 'stat_reaction'
+TABLE_CHANNELS = 'stat_channel'
 TABLE_USERS = 'stat_user'
 TABLE_TG_SESSION_POOL = 'config__tg_bot_session_pool'
 

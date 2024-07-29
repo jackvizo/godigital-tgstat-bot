@@ -92,6 +92,7 @@ class Stat_post_info(Base):
 
     forwards = Column(Integer)
 
+
 class Stat_reaction(Base):
     __tablename__ = 'stat_reaction'
 
@@ -131,3 +132,13 @@ class Config__tg_bot_session_pool(Base):
 
     config__tg_channel = Column(BigInteger, ForeignKey('config__tg_channel.pk'))
     config__tg_channel_pk = Column(BigInteger)
+
+
+class Stat_channel(Base):
+    __tablename__ = 'stat_channel'
+    pk = Column(BigInteger, primary_key=True)
+
+    timestamp = Column(DateTime, server_default=func.now())
+    tg_channel_id = Column(BigInteger)
+    total_participants = Column(BigInteger)
+    tg_last_admin_log_event_id = Column(BigInteger)

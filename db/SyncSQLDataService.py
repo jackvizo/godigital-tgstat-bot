@@ -1,6 +1,7 @@
 from db.connection import create_db_connection
-from globals import TABLE_POSTS, TABLE_REACTIONS, TABLE_USERS, TABLE_TG_SESSION_POOL, TABLE_POSTS_INFO
-from db.models import Stat_post, Stat_reaction, Stat_user, Stat_post_info
+from db.models import Stat_post, Stat_reaction, Stat_user, Stat_post_info, Stat_channel
+from globals import TABLE_POSTS, TABLE_REACTIONS, TABLE_USERS, TABLE_TG_SESSION_POOL, TABLE_POSTS_INFO, \
+    TABLE_CHANNELS
 
 
 class SyncSQLDataService(object):
@@ -115,8 +116,21 @@ class SyncSQLDataService(object):
         return result
 
     def set_phone_number_banned(self, phone_number: str):
-        self.cursor.execute(Constants.SQL_SET_PHONE_BANNED, (phone_number))
+        self.cursor.execute(Constants.SQL_SET_PHONE_BANNED, (phone_number,))
         self.cursor.close()
+
+    def get_tg_last_event_id(self, tg_channel_id: int):
+        self.cursor.execute(Constants.SQL_GET_TG_LAST_EVENT_ID, (tg_channel_id,))
+        tg_last_event_id = self.cursor.fetchone()
+        self.cursor.close()
+
+        print('kek', tg_last_event_id)
+
+        return tg_last_event_id[0] if tg_last_event_id is not None else None
+
+    def insert_channel(self, channel: Stat_channel):
+        values = (channel.timestamp, channel.tg_channel_id, channel.tg_last_admin_log_event_id, channel.total_participants,)
+        self.cursor.execute(Constants.SQL_INSERT_CHANNEL, values)
 
 
 class Constants:
@@ -215,4 +229,17 @@ class Constants:
         UPDATE tg_bot_session_pool
         SET status = 'banned'
         WHERE phone_number = %s;
+    '''
+
+    SQL_GET_TG_LAST_EVENT_ID = f'''
+        SELECT tg_last_admin_log_event_id FROM {TABLE_CHANNELS}
+        WHERE tg_channel_id = %s
+        ORDER BY pk DESC
+        LIMIT 1
+    '''
+
+    SQL_INSERT_CHANNEL = f'''
+        INSERT INTO {TABLE_CHANNELS} (
+            timestamp, tg_channel_id, tg_last_admin_log_event_id, total_participants
+        ) VALUES (%s, %s, %s, %s)
     '''

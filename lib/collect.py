@@ -3,11 +3,12 @@ from time import time
 
 from telethon import types
 from telethon.sync import TelegramClient
+from telethon.tl.functions.channels import GetFullChannelRequest
 from telethon.tl.functions.messages import GetRepliesRequest
 from telethon.tl.types import PeerChannel
 
 from db.SyncSQLDataService import SyncSQLDataService
-from db.models import Stat_post, Stat_reaction, Stat_user, Stat_post_info
+from db.models import Stat_post, Stat_reaction, Stat_user, Stat_post_info, Stat_channel
 from db.queries import get_last_post_id_in_channel
 from lib.scheduler import schedule_tg_collect_flow_run
 
@@ -78,7 +79,7 @@ async def get_posts(tg_client: TelegramClient, channel_id: int, user_dict_link: 
                         print(f'Ошибка извлечения реакции: {e}')
                     stat_reaction.tg_channel_id = channel_id
                     stat_reaction.tg_post_id = tg_post.id
-                    stat_reaction.timestamp = datetime.now()
+                    stat_reaction.timestamp = current_time
 
                     react_list.append(stat_reaction)
 
@@ -117,22 +118,28 @@ async def get_posts(tg_client: TelegramClient, channel_id: int, user_dict_link: 
 
                 # Вычисляем время жизни поста
                 post_age = current_time - tg_post.date.replace(tzinfo=None)
+                print(f'post_age {post_age}')
 
                 # Обновляем просмотры и реакции за 1 час, если время жизни поста не более 1 часа
                 # Оставляем 5 минутный запас на задержки запуска скрипта
                 if post_age <= timedelta(hours=1, minutes=5) or not stat_post_info.views_1h:
+                    print('update views_1h')
+
                     set_field_value(stat_post_info, tg_post.views, field='views_1h')
                     set_field_value(stat_post_info, 0 if tg_post.reactions is None else len(tg_post.reactions.results),
                                     field='reactions_1h')
-                    set_field_value(stat_post_info, stat_post_info.comments_messages_count, field='comments_messages_count_1h')
+                    set_field_value(stat_post_info, stat_post_info.comments_messages_count,
+                                    field='comments_messages_count_1h')
 
                 # Обновляем просмотры и реакции за 24 часа, если время жизни поста не более 24 часов
                 # Оставляем 5 минутный запас на задержкиу запуска скрипта
                 if post_age <= timedelta(hours=24, minutes=5) or not stat_post_info.view_24h:
+                    print('update view_24h')
                     set_field_value(stat_post_info, tg_post.views, field='view_24h')
                     set_field_value(stat_post_info, 0 if tg_post.reactions is None else len(tg_post.reactions.results),
                                     field='reaction_24h')
-                    set_field_value(stat_post_info, stat_post_info.comments_messages_count, field='comments_messages_count_24h')
+                    set_field_value(stat_post_info, stat_post_info.comments_messages_count,
+                                    field='comments_messages_count_24h')
 
             else:
                 print(f'Объект "{type(tg_post)}" (id={tg_post.id}, chat: {tg_post.chat_id}, '
@@ -220,41 +227,73 @@ async def get_comments(tg_client: TelegramClient, channel_id: int, message_id: i
                     return comments_channels_count, comments_users_count, comments_messages_count
 
 
-async def get_user_actions(tg_client: TelegramClient, channel_id: int, user_dict_link: dict):
-    res = tg_client.iter_admin_log(entity=PeerChannel(channel_id), join=True, leave=True, invite=True, limit=1000)
-    async for event in res:
-        user = user_dict_link[event.user_id] if event.user_id in user_dict_link else Stat_user()
+async def get_user_actions(tg_client: TelegramClient, channel_id: int, tg_last_admin_event_id: int or None,
+                           user_dict_link: dict):
+    max_id = 0
+    limit = 1000
+    new_tg_last_admin_event_id = None
+    loops_count = 0
 
-        user.tg_user_id = event.user_id
-        user.tg_channel_id = channel_id
-        user.username = event.user.username
-        user.first_name = event.user.first_name
-        user.last_name = event.user.last_name
-        user.phone = event.user.phone
-        user.scam = event.user.scam
-        user.premium = event.user.premium
-        user.verified = event.user.verified
+    print('tg_last_admin_event_id', tg_last_admin_event_id)
 
-        if event.joined_by_invite or event.joined_invite:
-            user.is_joined_by_link = True
-            user.joined_at = event.date.replace(tzinfo=None)
-            user.invite_link = event.action.invite.link
+    while True:
+        batch_size = 0
+        loops_count = loops_count + 1
+        admin_log = tg_client.iter_admin_log(entity=PeerChannel(channel_id), join=True, leave=True, invite=True,
+                                             limit=limit,
+                                             min_id=0 if tg_last_admin_event_id is None else tg_last_admin_event_id,
+                                             max_id=max_id)
 
-        if event.joined:
-            user.joined_at = event.date.replace(tzinfo=None)
+        async for event in admin_log:
+            batch_size = batch_size + 1
+            if new_tg_last_admin_event_id is None:
+                new_tg_last_admin_event_id = event.id
 
-        if event.left:
-            user.left_at = event.date.replace(tzinfo=None)
+            if event.id < max_id or max_id == 0:
+                max_id = event.id
 
-        user_dict_link.update({event.user_id: user})
+            user = user_dict_link[event.user_id] if event.user_id in user_dict_link else Stat_user()
+
+            user.tg_user_id = event.user_id
+            user.tg_channel_id = channel_id
+            user.username = event.user.username
+            user.first_name = event.user.first_name
+            user.last_name = event.user.last_name
+            user.phone = event.user.phone
+            user.scam = event.user.scam
+            user.premium = event.user.premium
+            user.verified = event.user.verified
+
+            if event.joined_by_invite or event.joined_invite:
+                user.is_joined_by_link = True
+                user.joined_at = event.date.replace(tzinfo=None)
+                user.invite_link = event.action.invite.link
+
+            if event.joined:
+                user.joined_at = event.date.replace(tzinfo=None)
+
+            if event.left:
+                user.left_at = event.date.replace(tzinfo=None)
+
+            user_dict_link.update({event.user_id: user})
+
+        print(f'[get_user_actions] batch_size {batch_size}; loops_count {loops_count}')
+
+        if batch_size < limit or loops_count > 10:
+            break
+
+    return new_tg_last_admin_event_id if new_tg_last_admin_event_id else tg_last_admin_event_id
 
 
-async def collect_channel(tg_client, channel_id):
-    """
-    :param tg_client: TelegramClient
-    :param channel_id: int
-    :return: statistic collection service for telegram-channels
-    """
+async def get_participants_count(tg_client: TelegramClient, tg_channel_id: int):
+    try:
+        full_chat = await tg_client(GetFullChannelRequest(PeerChannel(tg_channel_id)))
+        return full_chat.full_chat.participants_count
+    except AttributeError:
+        return 0
+
+
+async def collect_channel(tg_client: TelegramClient, channel_id: int, tg_last_admin_event_id: int or None):
     current_time = datetime.utcnow()
 
     async with tg_client:
@@ -264,12 +303,23 @@ async def collect_channel(tg_client, channel_id):
                                                                 current_time=current_time, user_dict_link=user_dict,
                                                                 max_posts=10)
 
-        await get_user_actions(tg_client=tg_client, channel_id=channel_id, user_dict_link=user_dict)
+        new_tg_last_admin_event_id = await get_user_actions(tg_client=tg_client, channel_id=channel_id,
+                                                            tg_last_admin_event_id=tg_last_admin_event_id,
+                                                            user_dict_link=user_dict)
 
-        return user_dict, post_list, react_list, post_info_list
+        total_participants_count = await get_participants_count(tg_client=tg_client, tg_channel_id=channel_id)
+
+        stat_channel = Stat_channel()
+        stat_channel.timestamp = current_time
+        stat_channel.tg_channel_id = channel_id
+        stat_channel.total_participants = total_participants_count
+        stat_channel.tg_last_admin_log_event_id = 0 if new_tg_last_admin_event_id is None else new_tg_last_admin_event_id
+
+        return user_dict, post_list, react_list, post_info_list, stat_channel
 
 
-def store_channel(sql: SyncSQLDataService, user_dict, post_list, react_list, post_info_list):
+def store_channel(sql: SyncSQLDataService, user_dict, post_list, react_list, post_info_list,
+                  stat_channel):
     sql.open()
     try:
         for user in user_dict.values():
@@ -282,6 +332,8 @@ def store_channel(sql: SyncSQLDataService, user_dict, post_list, react_list, pos
 
         for react in react_list:
             sql.upsert_reaction(react)
+
+        sql.insert_channel(stat_channel)
 
         sql.connection.commit()
     except Exception as e:
