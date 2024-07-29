@@ -122,7 +122,7 @@ async def get_posts(tg_client: TelegramClient, channel_id: int, user_dict_link: 
 
                 # Обновляем просмотры и реакции за 1 час, если время жизни поста не более 1 часа
                 # Оставляем 5 минутный запас на задержки запуска скрипта
-                if post_age <= timedelta(hours=1, minutes=5) or not stat_post_info.views_1h:
+                if post_age <= timedelta(hours=1, minutes=5):
                     print('update views_1h')
 
                     set_field_value(stat_post_info, tg_post.views, field='views_1h')
@@ -132,8 +132,8 @@ async def get_posts(tg_client: TelegramClient, channel_id: int, user_dict_link: 
                                     field='comments_messages_count_1h')
 
                 # Обновляем просмотры и реакции за 24 часа, если время жизни поста не более 24 часов
-                # Оставляем 5 минутный запас на задержкиу запуска скрипта
-                if post_age <= timedelta(hours=24, minutes=5) or not stat_post_info.view_24h:
+                # Оставляем 5 минутный запас на задержку запуска скрипта
+                if post_age <= timedelta(hours=24, minutes=5):
                     print('update view_24h')
                     set_field_value(stat_post_info, tg_post.views, field='view_24h')
                     set_field_value(stat_post_info, 0 if tg_post.reactions is None else len(tg_post.reactions.results),
