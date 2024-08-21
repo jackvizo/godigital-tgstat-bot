@@ -54,11 +54,14 @@ async def subflow_collect_tg_channels_by_phone_number(phone_number: str, channel
             print(
                 f'collected posts: {len(post_list)}; collected reacts: {len(react_list)}; collected users: {len(user_dict)}')
 
-            await schedule_flow_run(sql, post_list, channel_id, phone_number)
-
             store_channel(sql=sql, user_dict=user_dict, post_list=post_list,
                           react_list=react_list,
                           post_info_list=post_info_list, stat_channel=stat_channel)
+            try:
+                await schedule_flow_run(sql, post_list, channel_id, phone_number)
+            except Exception as e:
+                print(e)
+
             sql.cursor.close()
         await tg_client.disconnect()
 
