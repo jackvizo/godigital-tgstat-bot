@@ -6,7 +6,7 @@ from globals import PREFECT_SERVER_URL
 
 
 def get_deployment_by_flow_name(flow_name: str):
-    response = httpx.post(f"{PREFECT_SERVER_URL}/api/deployments/filter", json={
+    response = httpx.post(f"{PREFECT_SERVER_URL}/deployments/filter", json={
         "flows": {
             "name": {
                 "any_": [flow_name]
@@ -18,7 +18,7 @@ def get_deployment_by_flow_name(flow_name: str):
 
     
 def create_scheduled_flow_run(deployment_id: str, scheduled_start_time: datetime, phone_number: str, channel_id: int):
-    response = httpx.post(f"{PREFECT_SERVER_URL}/api/deployments/{deployment_id}/create_flow_run", json={
+    response = httpx.post(f"{PREFECT_SERVER_URL}/deployments/{deployment_id}/create_flow_run", json={
         "parameters": {
             "scheduled_phone_number": phone_number,
             "scheduled_tg_channel_id": channel_id
