@@ -124,7 +124,7 @@ class SyncSQLDataService(object):
         tg_last_event_id = self.cursor.fetchone()
         self.cursor.close()
 
-        print('kek', tg_last_event_id)
+        # print('kek', tg_last_event_id)
 
         return tg_last_event_id[0] if tg_last_event_id is not None else None
 
@@ -140,8 +140,8 @@ class Constants:
             last_name, username, phone, scam, premium, verified, is_joined_by_link, invite_link
         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (tg_user_id, tg_channel_id) DO UPDATE SET
-            joined_at = EXCLUDED.joined_at,
-            left_at = EXCLUDED.left_at,
+            joined_at = COALESCE(EXCLUDED.joined_at, {TABLE_USERS}.joined_at),
+            left_at = COALESCE(EXCLUDED.left_at, {TABLE_USERS}.left_at),
             first_name = EXCLUDED.first_name,
             last_name = EXCLUDED.last_name,
             username = EXCLUDED.username,
