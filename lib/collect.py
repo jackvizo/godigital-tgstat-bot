@@ -355,9 +355,11 @@ async def collect_channel(tg_client: TelegramClient, channel_id: int, tg_last_ad
 def store_channel(sql: SyncSQLDataService, user_dict, post_list, react_list, post_info_list,
                   stat_channel):
     sql.open()
+    current_time = datetime.utcnow()
+
     try:
         for user in user_dict.values():
-            sql.upsert_user(user)
+            sql.upsert_user(user, current_time)
         for post in post_list:
             sql.insert_post(post)
 
