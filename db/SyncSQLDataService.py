@@ -140,7 +140,7 @@ class Constants:
             timestamp,
             joined_at, left_at, tg_user_id, tg_channel_id, first_name,
             last_name, username, phone, scam, premium, verified, is_joined_by_link, invite_link
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (tg_user_id, tg_channel_id) DO UPDATE SET
             timestamp = EXCLUDED.timestamp,
             joined_at = COALESCE(EXCLUDED.joined_at, {TABLE_USERS}.joined_at),
