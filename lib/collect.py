@@ -294,8 +294,8 @@ async def get_participants_count(tg_client: TelegramClient, tg_channel_id: int):
         return 0
 
 
-async def fulfill_user_with_missing_joined_at(tg_client: TelegramClient, tg_channel_id: int, stat_user: Stat_user):
-    user = await tg_client.get_entity(stat_user.tg_user_id)
+async def fulfill_user_with_missing_joined_at(tg_client: TelegramClient, tg_channel_id: int, tg_user_id, users_dict):
+    user = await tg_client.get_entity(tg_user_id)
     channel = await tg_client.get_entity(PeerChannel(tg_channel_id))
 
     peer_channel = InputPeerChannel(channel_id=tg_channel_id, access_hash=channel.access_hash)
@@ -309,8 +309,8 @@ async def fulfill_user_with_missing_joined_at(tg_client: TelegramClient, tg_chan
         ))
 
         if result is not None and result.participant is not None and result.participant.date is not None:
-            user.joined_at = result.participant.date
-            print(f'user {stat_user.tg_user_id} is missing joined_at value. Value fulfilled by direct request with {user.joined_at}')
+            users_dict[tg_user_id].joined_at = result.participant.date
+            print(f'user {tg_user_id} is missing joined_at value. Value fulfilled by direct request with {users_dict[tg_user_id].joined_at}')
     except Exception as e:
         print('[warning] ', e)
 
@@ -319,7 +319,7 @@ async def fulfill_users_with_missing_joined_at(tg_client: TelegramClient, tg_cha
                                                             users_dict: Dict[int, Stat_user]):
     for user_id in users_dict:
         if users_dict[user_id].joined_at is None:
-            await fulfill_user_with_missing_joined_at(tg_client, tg_channel_id, users_dict[user_id])
+            await fulfill_user_with_missing_joined_at(tg_client, tg_channel_id, user_id, users_dict)
 
 
 async def collect_channel(tg_client: TelegramClient, channel_id: int, tg_last_admin_event_id: int or None):
@@ -348,6 +348,8 @@ async def collect_channel(tg_client: TelegramClient, channel_id: int, tg_last_ad
             await fulfill_users_with_missing_joined_at(tg_client=tg_client, tg_channel_id=channel_id, users_dict=user_dict)
         except Exception as e:
             print('[warning] ', e)
+
+        print('new dict', user_dict)
 
         return user_dict, post_list, react_list, post_info_list, stat_channel
 
