@@ -301,15 +301,18 @@ async def fulfill_user_with_missing_joined_at(tg_client: TelegramClient, tg_chan
     peer_channel = InputPeerChannel(channel_id=tg_channel_id, access_hash=channel.access_hash)
     peer_user = InputPeerUser(user_id=user.id, access_hash=user.access_hash)
 
-    # Получаем информацию об участнике канала
-    result = await tg_client(GetParticipantRequest(
-        channel=peer_channel,
-        participant=peer_user
-    ))
+    try:
+        # Получаем информацию об участнике канала
+        result = await tg_client(GetParticipantRequest(
+            channel=peer_channel,
+            participant=peer_user
+        ))
 
-    if result is not None and result.participant is not None and result.participant.date is not None:
-        user.joined_at = result.participant.date
-        print(f'user {stat_user.tg_user_id} is missing joined_at value. Value fulfilled by direct request with {user.joined_at}')
+        if result is not None and result.participant is not None and result.participant.date is not None:
+            user.joined_at = result.participant.date
+            print(f'user {stat_user.tg_user_id} is missing joined_at value. Value fulfilled by direct request with {user.joined_at}')
+    except Exception as e:
+        print('[warning] ', e)
 
 
 async def fulfill_users_with_missing_joined_at(tg_client: TelegramClient, tg_channel_id: int,
@@ -344,7 +347,7 @@ async def collect_channel(tg_client: TelegramClient, channel_id: int, tg_last_ad
         try:
             await fulfill_users_with_missing_joined_at(tg_client=tg_client, tg_channel_id=channel_id, users_dict=user_dict)
         except Exception as e:
-            print(e)
+            print('[warning] ', e)
 
         return user_dict, post_list, react_list, post_info_list, stat_channel
 
