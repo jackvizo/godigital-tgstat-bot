@@ -294,8 +294,8 @@ async def get_participants_count(tg_client: TelegramClient, tg_channel_id: int):
         return 0
 
 
-async def fulfill_user_with_missing_joined_at(tg_client: TelegramClient, tg_channel_id: int, user: Stat_user):
-    user = await tg_client.get_entity(user.id)
+async def fulfill_user_with_missing_joined_at(tg_client: TelegramClient, tg_channel_id: int, stat_user: Stat_user):
+    user = await tg_client.get_entity(stat_user.tg_user_id)
     channel = await tg_client.get_entity(PeerChannel(tg_channel_id))
 
     peer_channel = InputPeerChannel(channel_id=tg_channel_id, access_hash=channel.access_hash)
@@ -309,6 +309,7 @@ async def fulfill_user_with_missing_joined_at(tg_client: TelegramClient, tg_chan
 
     if result is not None and result.participant is not None and result.participant.date is not None:
         user.joined_at = result.participant.date
+        print(f'user {stat_user.tg_user_id} is missing joined_at value. Value fulfilled by direct request with {user.joined_at}')
 
 
 async def fulfill_users_with_missing_joined_at(tg_client: TelegramClient, tg_channel_id: int,
