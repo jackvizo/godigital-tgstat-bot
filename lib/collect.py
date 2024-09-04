@@ -349,8 +349,6 @@ async def collect_channel(tg_client: TelegramClient, channel_id: int, tg_last_ad
         except Exception as e:
             print('[warning] ', e)
 
-        print('new dict', user_dict)
-
         return user_dict, post_list, react_list, post_info_list, stat_channel
 
 
