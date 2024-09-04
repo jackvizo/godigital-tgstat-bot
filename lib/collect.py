@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
 from time import time
+from typing import Dict, List
 
 from telethon import types
 from telethon.sync import TelegramClient
-from telethon.tl.functions.channels import GetFullChannelRequest
+from telethon.tl.functions.channels import GetFullChannelRequest, GetParticipantRequest
 from telethon.tl.functions.messages import GetRepliesRequest
-from telethon.tl.types import PeerChannel
+from telethon.tl.types import PeerChannel, InputPeerChannel, InputPeerUser
 
 from db.SyncSQLDataService import SyncSQLDataService
 from db.models import Stat_post, Stat_reaction, Stat_user, Stat_post_info, Stat_channel
@@ -293,6 +294,30 @@ async def get_participants_count(tg_client: TelegramClient, tg_channel_id: int):
         return 0
 
 
+async def fulfill_user_with_missing_joined_at(tg_client: TelegramClient, tg_channel_id: int, user: Stat_user):
+    user = await tg_client.get_entity(user.id)
+    channel = await tg_client.get_entity(PeerChannel(tg_channel_id))
+
+    peer_channel = InputPeerChannel(channel_id=tg_channel_id, access_hash=channel.access_hash)
+    peer_user = InputPeerUser(user_id=user.id, access_hash=user.access_hash)
+
+    # Получаем информацию об участнике канала
+    result = await tg_client(GetParticipantRequest(
+        channel=peer_channel,
+        participant=peer_user
+    ))
+
+    if result is not None and result.participant is not None and result.participant.date is not None:
+        user.joined_at = result.participant.date
+
+
+async def fulfill_users_with_missing_joined_at(tg_client: TelegramClient, tg_channel_id: int,
+                                                            users_dict: Dict[int, Stat_user]):
+    for user_id in users_dict:
+        if users_dict[user_id].joined_at is None:
+            await fulfill_user_with_missing_joined_at(tg_client, tg_channel_id, users_dict[user_id])
+
+
 async def collect_channel(tg_client: TelegramClient, channel_id: int, tg_last_admin_event_id: int or None):
     current_time = datetime.utcnow()
 
@@ -314,6 +339,11 @@ async def collect_channel(tg_client: TelegramClient, channel_id: int, tg_last_ad
         stat_channel.tg_channel_id = channel_id
         stat_channel.total_participants = total_participants_count
         stat_channel.tg_last_admin_log_event_id = 0 if new_tg_last_admin_event_id is None else new_tg_last_admin_event_id
+
+        try:
+            await fulfill_users_with_missing_joined_at(tg_client=tg_client, tg_channel_id=channel_id, users_dict=user_dict)
+        except Exception as e:
+            print(e)
 
         return user_dict, post_list, react_list, post_info_list, stat_channel
 
