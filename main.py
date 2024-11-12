@@ -16,6 +16,6 @@ if __name__ == '__main__':
     if switch_flow == 'add-bot-session':
         flow_add_bot_session.serve(name="add-bot-session")
     if switch_flow == 'tg-collect-by-all-users':
-        flow_tg_collect_by_all_users.serve(name="tg-collect-by-all-users", interval=1800)
+        flow_tg_collect_by_all_users.serve(name="tg-collect-by-all-users", interval=1200)
     else:
         raise ValueError(f"Invalid flow: {switch_flow}. Available flows are ['add-phone-number', 'tg-collect-by-user']")
