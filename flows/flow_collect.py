@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 from prefect import flow
+from telethon.errors import ChatAdminRequiredError
 
 from db.SyncSQLDataService import SyncSQLDataService
 from db.queries import get_tracked_tg_channels, get_last_post_id_in_channel
@@ -64,7 +65,10 @@ async def subflow_collect_tg_channels_by_phone_number(phone_number: str, channel
 
             sql.cursor.close()
         await tg_client.disconnect()
-
+    except ChatAdminRequiredError as e:
+        sql.set_phone_number_banned(phone_number)
+        print(f'phone number {phone_number} is disabled')
+        print(e)
     finally:
         sql.cursor.close()
         sql.close()

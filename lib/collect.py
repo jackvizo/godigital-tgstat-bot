@@ -115,7 +115,7 @@ async def get_posts(tg_client: TelegramClient, channel_id: int, user_dict_link: 
 
             if hasattr(tg_post, 'views'):
                 # Просмотры за всё время
-                set_field_value(stat_post_info, tg_post.views, field='views')
+                set_field_value(stat_post_info, 0 if tg_post.views is None else tg_post.views, field='views')
 
                 # Вычисляем время жизни поста
                 post_age = current_time - tg_post.date.replace(tzinfo=None)
@@ -126,7 +126,7 @@ async def get_posts(tg_client: TelegramClient, channel_id: int, user_dict_link: 
                 if post_age <= timedelta(hours=1, minutes=10):
                     print('update views_1h')
 
-                    set_field_value(stat_post_info, tg_post.views, field='views_1h')
+                    set_field_value(stat_post_info, 0 if tg_post.views is None else tg_post.views, field='views_1h')
                     set_field_value(stat_post_info, 0 if tg_post.reactions is None else len(tg_post.reactions.results),
                                     field='reactions_1h')
                     set_field_value(stat_post_info, stat_post_info.comments_messages_count,
@@ -136,7 +136,7 @@ async def get_posts(tg_client: TelegramClient, channel_id: int, user_dict_link: 
                 # Оставляем 10 минутный запас на задержку запуска скрипта
                 if post_age <= timedelta(hours=24, minutes=10):
                     print('update view_24h')
-                    set_field_value(stat_post_info, tg_post.views, field='view_24h')
+                    set_field_value(stat_post_info, 0 if tg_post.views is None else tg_post.views, field='view_24h')
                     set_field_value(stat_post_info, 0 if tg_post.reactions is None else len(tg_post.reactions.results),
                                     field='reaction_24h')
                     set_field_value(stat_post_info, stat_post_info.comments_messages_count,
